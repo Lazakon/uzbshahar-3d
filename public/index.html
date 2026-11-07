@@ -259,6 +259,7 @@ async function enterCity(){
   myUser=username;
   document.getElementById('myname').textContent='👤 @'+username;
   document.getElementById('login').style.display='none';
+  if(!animationStarted){animationStarted=true;animate();}
   await loadHouses();
  }catch(e){
   error.textContent=e.message||'Server bilan aloqa yo‘q';
@@ -383,12 +384,13 @@ async function findHouse(){
 }
 window.findHouse = findHouse;
 
+let animationStarted=false;
 function animate(){
  requestAnimationFrame(animate);
  controls.update();
  renderer.render(scene,camera);
 }
-animate();
+renderer.render(scene,camera);
 
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
