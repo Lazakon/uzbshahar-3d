@@ -214,3 +214,303 @@ app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
 pool.query("SELECT NOW()")
   .then(res => console.log("NEON BAZA ISHLAYAPTI:", res.rows[0]))
   .catch(err => console.error("NEON XATOSI:", err.message));
+
+// UZB ECONOMY DATABASE
+async function initEconomy() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS economy (
+      username TEXT PRIMARY KEY REFERENCES users(username),
+      balance BIGINT NOT NULL DEFAULT 1000,
+      bank BIGINT NOT NULL DEFAULT 0,
+      last_gift DATE
+    );
+
+    CREATE TABLE IF NOT EXISTS economy_tasks (
+      id SERIAL PRIMARY KEY,
+      username TEXT NOT NULL REFERENCES users(username),
+      task_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      task_type TEXT NOT NULL,
+      reward INTEGER NOT NULL,
+      UNIQUE(username, task_date, task_type)
+    );
+
+    CREATE TABLE IF NOT EXISTS economy_buildings (
+      id SERIAL PRIMARY KEY,
+      username TEXT NOT NULL REFERENCES users(username),
+      building_type TEXT NOT NULL,
+      level INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  console.log("UZB ECONOMY DATABASE READY!");
+}
+
+
+// UZB ECONOMY API
+
+app.get('/api/economy/:username', async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+
+    await pool.query(
+      `INSERT INTO economy (username)
+       VALUES ($1) ON CONFLICT DO NOTHING`,
+      [username]
+    );
+
+    const result = await pool.query(
+      'SELECT * FROM economy WHERE username=$1',
+      [username]
+    );
+
+    res.json({success:true, economy:result.rows[0]});
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({error:'Iqtisodiyot xatosi'});
+  }
+});
+
+
+// MONEY TRANSFER API
+app.post('/api/economy/earn', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+    const amount = Number(req.body.amount);
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username) ||
+        !Number.isSafeInteger(amount) || amount < 1 || amount > 10000) {
+      return res.status(400).json({error:'Noto‘g‘ri ma’lumot'});
+    }
+
+    const result = await pool.query(`
+      INSERT INTO economy (username, balance)
+      VALUES ($1, 1000 + $2)
+      ON CONFLICT (username)
+      DO UPDATE SET balance = economy.balance + $2
+      RETURNING balance, bank
+    `, [username, amount]);
+
+    res.json({success:true, economy:result.rows[0]});
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Pul qo‘shishda xato'});
+  }
+});
+
+// BANK API
+app.post('/api/economy/bank', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+    const amount = Number(req.body.amount);
+    const action = req.body.action;
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username) ||
+        !Number.isSafeInteger(amount) || amount < 1 ||
+        !['deposit','withdraw'].includes(action)) {
+      return res.status(400).json({error:'Noto‘g‘ri ma’lumot'});
+    }
+
+    const result = await pool.query(`
+      UPDATE economy
+      SET balance = balance + CASE WHEN $3='withdraw' THEN $2 ELSE -$2 END,
+          bank = bank + CASE WHEN $3='deposit' THEN $2 ELSE -$2 END
+      WHERE username=$1
+      AND CASE WHEN $3='deposit' THEN balance >= $2 ELSE bank >= $2 END
+      RETURNING balance, bank
+    `, [username, amount, action]);
+
+    if (!result.rows.length) {
+      return res.status(400).json({error:'Mablag‘ yetarli emas'});
+    }
+
+    res.json({success:true, economy:result.rows[0]});
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Bank xatosi'});
+  }
+});
+
+
+// DAILY GIFT API
+app.post('/api/economy/gift', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username))
+      return res.status(400).json({error:'Username noto‘g‘ri'});
+
+    const result = await pool.query(`
+      INSERT INTO economy (username, balance, last_gift)
+      VALUES ($1, 1200, CURRENT_DATE)
+      ON CONFLICT (username) DO UPDATE
+      SET balance = economy.balance + 200,
+          last_gift = CURRENT_DATE
+      WHERE economy.last_gift IS NULL
+         OR economy.last_gift < CURRENT_DATE
+      RETURNING balance
+    `, [username]);
+
+    if (!result.rows.length)
+      return res.status(400).json({error:'Bugungi sovg‘a olingan'});
+
+    res.json({success:true, reward:200, balance:result.rows[0].balance});
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Sovg‘a xatosi'});
+  }
+});
+
+// DAILY TASK API
+app.post('/api/economy/task', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+    const task = String(req.body.task || '');
+
+    const tasks = {
+      visit: 100,
+      build: 300,
+      explore: 150
+    };
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username) || !tasks[task])
+      return res.status(400).json({error:'Topshiriq noto‘g‘ri'});
+
+    const result = await pool.query(`
+      WITH reward AS (
+        INSERT INTO economy_tasks (username, task_type, reward)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (username, task_date, task_type) DO NOTHING
+        RETURNING reward
+      )
+      UPDATE economy
+      SET balance = balance + (SELECT reward FROM reward)
+      WHERE username=$1 AND EXISTS (SELECT 1 FROM reward)
+      RETURNING balance
+    `, [username, task, tasks[task]]);
+
+    if (!result.rows.length)
+      return res.status(400).json({error:'Topshiriq bajarilgan yoki foydalanuvchi topilmadi'});
+
+    res.json({success:true, reward:tasks[task], balance:result.rows[0].balance});
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Topshiriq xatosi'});
+  }
+});
+
+
+// BUILDING PURCHASE API
+app.post('/api/economy/build', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+    const type = String(req.body.type || '');
+
+    const prices = {
+      shop: 500,
+      market: 1500,
+      hotel: 5000
+    };
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username) || !prices[type])
+      return res.status(400).json({error:'Noto‘g‘ri ma’lumot'});
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const account = await client.query(
+        'SELECT balance FROM economy WHERE username=$1 FOR UPDATE',
+        [username]
+      );
+
+      if (!account.rows.length || Number(account.rows[0].balance) < prices[type]) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({error:'Mablag‘ yetarli emas'});
+      }
+
+      await client.query(
+        'UPDATE economy SET balance=balance-$2 WHERE username=$1',
+        [username, prices[type]]
+      );
+
+      const building = await client.query(
+        `INSERT INTO economy_buildings (username, building_type)
+         VALUES ($1,$2) RETURNING *`,
+        [username, type]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({success:true, building:building.rows[0]});
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Bino sotib olishda xato'});
+  }
+});
+
+// BUILDING INCOME API
+app.post('/api/economy/collect', async (req, res) => {
+  try {
+    const username = String(req.body.username || '').toLowerCase();
+
+    if (!/^[a-z0-9._]{1,30}$/.test(username))
+      return res.status(400).json({error:'Username noto‘g‘ri'});
+
+    const income = {shop:50, market:150, hotel:400};
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const buildings = await client.query(
+        'SELECT * FROM economy_buildings WHERE username=$1',
+        [username]
+      );
+
+      const total = buildings.rows.reduce(
+        (sum, b) => sum + (income[b.building_type] || 0) * Number(b.level),
+        0
+      );
+
+      if (!total) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({error:'Daromad beruvchi bino yo‘q'});
+      }
+
+      const account = await client.query(
+        'UPDATE economy SET balance=balance+$2 WHERE username=$1 RETURNING balance',
+        [username, total]
+      );
+
+      if (!account.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({error:'Hisob topilmadi'});
+      }
+
+      await client.query('COMMIT');
+
+      res.json({success:true, income:total, balance:account.rows[0].balance});
+    } catch(e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:'Daromad olishda xato'});
+  }
+});
+
+
+initEconomy().catch(err =>
+  console.error("ECONOMY INIT ERROR:", err)
+);
