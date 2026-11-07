@@ -7,6 +7,17 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+console.log("DATABASE_URL mavjud:", !!process.env.DATABASE_URL);
+
+try {
+  const db = new URL(process.env.DATABASE_URL);
+  console.log("DATABASE HOST:", db.hostname);
+  console.log("DATABASE NAME:", db.pathname);
+} catch (err) {
+  console.log("DATABASE URL xatosi:", err.message);
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -200,3 +211,6 @@ app.put('/api/profile', async (req, res) => {
 app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
   console.log('UZB SHAHAR 3D server ishga tushdi!');
 });
+pool.query("SELECT NOW()")
+  .then(res => console.log("NEON BAZA ISHLAYAPTI:", res.rows[0]))
+  .catch(err => console.error("NEON XATOSI:", err.message));
