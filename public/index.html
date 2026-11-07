@@ -239,6 +239,7 @@ for(let i=0;i<9;i++){
  function makeTrafficHead(offsetX) {
   const group = new THREE.Group();
   group.position.x = offsetX;
+  group.position.z = 0.25;
   const lamps = {};
 
   for (const [name,color] of Object.entries({
@@ -326,39 +327,35 @@ function updateCityCars(delta) {
  const phase = trafficElapsed % 24;
 
  const verticalGreen = phase < 10;
- const verticalYellow = phase >= 10 && phase < 12;
  const horizontalGreen = phase >= 12 && phase < 22;
- const horizontalYellow = phase >= 22;
 
  const v = verticalGreen ? 'green' :
-           verticalYellow ? 'yellow' : 'red';
+           phase < 12 ? 'yellow' : 'red';
  const h = horizontalGreen ? 'green' :
-           horizontalYellow ? 'yellow' : 'red';
+           phase >= 22 ? 'yellow' : 'red';
 
  updateTrafficLights(v,h);
 
  for(const item of cityCars) {
-  const green = item.axis==='z'
+  const green = item.axis === 'z'
    ? verticalGreen : horizontalGreen;
 
-  const next = item.direction > 0
-   ? (Math.floor(item.position/16)+1)*16
-   : (Math.ceil(item.position/16)-1)*16;
+  const stopLine = item.direction > 0 ? -4.5 : 4.5;
+  const distanceToStop = (stopLine - item.position) * item.direction;
 
-  const distance = (next-item.position)*item.direction;
-  let movement = item.speed*delta;
+  let movement = item.speed * delta;
 
-  if(!green && distance > 4.5) {
-   movement = Math.min(movement,distance-4.5);
+  if(!green && distanceToStop >= 0) {
+   movement = Math.min(movement, distanceToStop);
   }
 
-  item.position += item.direction*movement;
+  item.position += item.direction * movement;
 
-  if(item.position>78) item.position=-78;
-  if(item.position< -78) item.position=78;
+  if(item.position > 78) item.position = -78;
+  if(item.position < -78) item.position = 78;
 
-  if(item.axis==='z') item.car.position.z=item.position;
-  else item.car.position.x=item.position;
+  if(item.axis === 'z') item.car.position.z = item.position;
+  else item.car.position.x = item.position;
  }
 }
 
