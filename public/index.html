@@ -259,7 +259,6 @@ async function enterCity(){
   myUser=username;
   document.getElementById('myname').textContent='👤 @'+username;
   document.getElementById('login').style.display='none';
-  if(!animationStarted){animationStarted=true;animate();}
   await loadHouses();
  }catch(e){
   error.textContent=e.message||'Server bilan aloqa yo‘q';
@@ -384,13 +383,12 @@ async function findHouse(){
 }
 window.findHouse = findHouse;
 
-let animationStarted=false;
 function animate(){
  requestAnimationFrame(animate);
  controls.update();
  renderer.render(scene,camera);
 }
-renderer.render(scene,camera);
+animate();
 
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
@@ -398,101 +396,5 @@ addEventListener('resize',()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 </script>
-
-<!-- UZB-ECONOMY-PANEL -->
-<style>
-#economyPanel{position:relative;z-index:9999;display:block;width:calc(100% - 24px);
- background:#172438;color:white;padding:15px;
- margin:12px;border-radius:15px;
- border:1px solid #385477;
-}
-#economyPanel button{
- background:#2477d4;color:white;border:0;
- padding:10px;border-radius:9px;margin:4px;
-}
-#economyPanel .eco-card{
- background:#263b55;padding:12px;
- border-radius:10px;margin:7px 0;
-}
-#economyPanel h3{margin-top:0}
-#economyPanel button:disabled{opacity:.5}
-</style>
-
-<div id="economyPanel">
- <h3>💰 SHAHAR IQTISODIYOTI</h3>
- <div class="eco-card">
-  🪙 Balans: <b id="ecoBalance">Yuklanmoqda...</b>
-  <br>🏦 Bank: <b id="ecoBank">0</b>
- </div>
- <button onclick="ecoRefresh()">🔄 Yangilash</button>
- <button onclick="ecoGift()">🎁 Kunlik sovg‘a</button>
-
- <div class="eco-card">
-  <b>🏦 BANK</b><br>
-  <input id="ecoAmount" type="number" min="1" placeholder="Miqdor">
-  <button onclick="ecoBankAction('deposit')">Pul qo‘yish</button>
-  <button onclick="ecoBankAction('withdraw')">Pul olish</button>
- </div>
-
- <div class="eco-card">
-  <b>🎯 TOPSHIRIQLAR</b><br>
-  <button onclick="ecoTask('visit')">Shaharga kirish +100</button>
-  <button onclick="ecoTask('explore')">Hududni o‘rganish +150</button>
-  <button onclick="ecoTask('build')">Qurilish +300</button>
- </div>
-
- <div class="eco-card">
-  <b>🏗 BINOLAR SOTIB OLISH</b><br>
-  <button onclick="ecoBuild('shop')">🏪 Do‘kon — 500</button>
-  <button onclick="ecoBuild('market')">🏬 Bozor — 1500</button>
-  <button onclick="ecoBuild('hotel')">🏨 Mehmonxona — 5000</button>
-  <br><button onclick="ecoCollect()">💵 Binolar daromadini olish</button>
- </div>
- <div id="ecoMessage"></div>
-</div>
-
-<script>
-const ecoApi = '/api/economy';
-async function ecoRequest(url, data) {
- const r = await fetch(url, {
-  method: data ? 'POST' : 'GET',
-  headers:{'Content-Type':'application/json'},
-  ...(data ? {body:JSON.stringify(data)} : {})
- });
- const j = await r.json();
- if(!r.ok) throw new Error(j.error || 'Xatolik');
- return j;
-}
-function ecoMsg(t){
- document.getElementById('ecoMessage').textContent=t;
-}
-async function ecoRefresh(){
- if(!window.myUser){ecoMsg('Avval tizimga kiring!');return;}
- try{
-  const j=await ecoRequest(ecoApi+'/'+encodeURIComponent(myUser));
-  document.getElementById('ecoBalance').textContent=j.economy.balance+' 🪙';
-  document.getElementById('ecoBank').textContent=j.economy.bank+' 🪙';
- }catch(e){ecoMsg(e.message);}
-}
-async function ecoAction(path,data){
- try{
-  const j=await ecoRequest(ecoApi+'/'+path,{username:myUser,...data});
-  ecoMsg('✅ Amal bajarildi!');
-  await ecoRefresh();
-  return j;
- }catch(e){ecoMsg('❌ '+e.message);}
-}
-function ecoGift(){ecoAction('gift',{});}
-function ecoTask(task){ecoAction('task',{task});}
-function ecoBuild(type){ecoAction('build',{type});}
-function ecoCollect(){ecoAction('collect',{});}
-function ecoBankAction(action){
- const amount=Number(document.getElementById('ecoAmount').value);
- if(!Number.isSafeInteger(amount)||amount<1){ecoMsg('Miqdorni kiriting!');return;}
- ecoAction('bank',{amount,action});
-}
-</script>
-<!-- UZB-ECONOMY-PANEL-END -->
-
 </body>
 </html>
