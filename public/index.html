@@ -14,6 +14,10 @@ input,button{width:100%;padding:15px;border:0;border-radius:9px;margin-top:12px;
 button{background:#e5a936;color:#151515;font-weight:bold}
 #info{position:fixed;top:12px;left:12px;background:#10182ccc;padding:12px;border-radius:10px;z-index:2}
 #count{position:fixed;bottom:15px;left:15px;background:#10182ccc;padding:12px;border-radius:10px}
+#houseSearch{position:fixed;top:75px;left:12px;z-index:3;width:245px;background:#17243dee;padding:10px;border-radius:12px}
+#houseSearch input{width:100%;padding:11px;margin:0}
+#houseSearch button{padding:11px;margin-top:7px}
+#searchResult{font-size:13px;margin:7px 2px 0}
 </style>
 </head>
 <body>
@@ -28,6 +32,11 @@ button{background:#e5a936;color:#151515;font-weight:bold}
 </div>
 <div id="info"><b>🏙️ UZB SHAHAR 3D</b><br><small id="myname">Virtual shahar</small></div>
 <div id="count">🏠 Uylar: 0</div>
+<div id="houseSearch">
+<input id="houseQuery" placeholder="@username yoki UZB-uyraqami">
+<button onclick="findHouse()">🔎 Uyimni topish</button>
+<div id="searchResult"></div>
+</div>
 
 <script type="importmap">
 {
@@ -149,7 +158,10 @@ for (const type of Object.keys(roadItems)) {
 }
 // UZB-CITY-ROADS-END
 
-function makeHouse(user,x,z){
+const houseObjects = [];
+let highlightedHouse = null;
+
+function makeHouse(user,x,z,houseId){
  const group=new THREE.Group();
  const base=new THREE.Mesh(
   new THREE.BoxGeometry(9,5,8),
@@ -201,6 +213,10 @@ function makeHouse(user,x,z){
  group.add(label);
 
  group.position.set(x,0,z);
+ group.userData.username = user;
+ group.userData.houseId = Number(houseId);
+ group.userData.originalColor = base.material.color.clone();
+ houseObjects.push(group);
  group.userData.username=user;
  scene.add(group);
  return group;
@@ -313,7 +329,7 @@ async function loadHouses(){
  const houses=await response.json();
  updateCityBoundary(houses);
  houses.forEach(item=>{
-  makeHouse(item.username,item.house.x,item.house.z);
+  makeHouse(item.username,item.house.x,item.house.z,item.house.id);
  });
  document.getElementById('count').textContent='🏠 Uylar: '+houses.length;
  const mine=houses.find(h=>h.username===myUser);
@@ -323,6 +339,50 @@ async function loadHouses(){
   controls.update();
  }
 }
+async function findHouse(){
+ const input = document.getElementById('houseQuery');
+ const result = document.getElementById('searchResult');
+ const query = input.value.trim().toLowerCase().replace(/^@/, '');
+ if(!query){
+   result.textContent = 'Username yoki uy raqamini kiriting';
+   return;
+ }
+ try{
+   const response = await fetch('/api/houses');
+   const houses = await response.json();
+   const code = query.toUpperCase().replace(/^UZB-/, '');
+   const found = houses.find(h =>
+     h.username.toLowerCase() === query ||
+     String(h.house.id) === code
+   );
+   if(!found){
+     result.textContent = 'Bunday uy topilmadi';
+     return;
+   }
+   const obj = houseObjects.find(h =>
+     h.userData.username === found.username
+   );
+   if(!obj){
+     result.textContent = 'Uy xaritada topilmadi';
+     return;
+   }
+   if(highlightedHouse){
+     highlightedHouse.children[0].material.color.copy(
+       highlightedHouse.userData.originalColor
+     );
+   }
+   highlightedHouse = obj;
+   obj.children[0].material.color.set(0xffd700);
+   controls.target.set(found.house.x, 0, found.house.z);
+   camera.position.set(found.house.x+20, 18, found.house.z+24);
+   controls.update();
+   result.textContent = '🏠 @' + found.username + ' uyi topildi!';
+ }catch(e){
+   result.textContent = 'Qidirishda xatolik yuz berdi';
+ }
+}
+window.findHouse = findHouse;
+
 function animate(){
  requestAnimationFrame(animate);
  controls.update();
