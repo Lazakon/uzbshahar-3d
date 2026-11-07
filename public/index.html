@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UZB SHAHAR 3D</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#10182c;color:white;font-family:Arial;overflow:hidden}
+canvas{display:block}
+#login{position:fixed;inset:0;z-index:5;background:#10182cee;display:flex;align-items:center;justify-content:center;padding:20px}
+.panel{background:#202e48;padding:28px;border-radius:18px;width:100%;max-width:360px;text-align:center}
+input,button{width:100%;padding:15px;border:0;border-radius:9px;margin-top:12px;font-size:16px}
+button{background:#e5a936;color:#151515;font-weight:bold}
+#info{position:fixed;top:12px;left:12px;background:#10182ccc;padding:12px;border-radius:10px;z-index:2}
+#count{position:fixed;bottom:15px;left:15px;background:#10182ccc;padding:12px;border-radius:10px}
+</style>
+</head>
+<body>
+<div id="login">
+ <div class="panel">
+  <h2>🏙️ UZB SHAHAR</h2>
+  <p>Virtual shaharga xush kelibsiz!</p>
+  <input id="username" placeholder="Instagram username (@siz)">
+  <button onclick="enterCity()">SHAHARGA KIRISH</button>
+  <p id="error"></p>
+ </div>
+</div>
+<div id="info"><b>🏙️ UZB SHAHAR 3D</b><br><small id="myname">Virtual shahar</small></div>
+<div id="count">🏠 Uylar: 0</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/controls/OrbitControls.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9bc4dc);
+scene.fog=new THREE.Fog(0x9bc4dc,150,400);
+
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,1000);
+camera.position.set(35,40,55);
+camera.lookAt(0,0,0);
+
+const renderer=new THREE.WebGLRenderer({antialias:false, powerPreference:"high-performance"});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x64745b,2));
+const sun=new THREE.DirectionalLight(0xffffff,2);
+sun.position.set(40,80,30);
+scene.add(sun);
+
+// Bo'sh maydon
+const ground=new THREE.Mesh(
+ new THREE.PlaneGeometry(500,500),
+ new THREE.MeshStandardMaterial({color:0x79a96a})
+);
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-.1;
+scene.add(ground);
+
+const grid=new THREE.GridHelper(500,50,0x63865c,0x63865c);
+grid.position.y=.02;
+scene.add(grid);
+
+
+// UZB-CITY-ROADS-V1
+// OPTIMIZED ROADS
+const roadMaterials = {
+  asphalt: new THREE.MeshStandardMaterial({color:0x343a40}),
+  sidewalk: new THREE.MeshStandardMaterial({color:0xb9b9b2}),
+  line: new THREE.MeshStandardMaterial({color:0xf5f0d5})
+};
+
+const roadItems = {
+  asphalt: [],
+  sidewalk: [],
+  line: []
+};
+
+function roadPlane(width, length, x, z, material) {
+  let type = material === roadMaterials.asphalt ? 'asphalt' :
+             material === roadMaterials.sidewalk ? 'sidewalk' : 'line';
+
+  let y = type === 'asphalt' ? (width < length ? 0.036 : 0.03) :
+          type === 'sidewalk' ? (width < length ? 0.05 : 0.045) :
+          (width < length ? 0.067 : 0.062);
+
+  roadItems[type].push({width,length,x,z,y});
+}
+
+const asphalt = roadMaterials.asphalt;
+const sidewalk = roadMaterials.sidewalk;
+const roadLine = roadMaterials.line;
+
+for (let i = 0; i < 9; i++) {
+  const x = -64 + i * 16;
+  roadPlane(4.4,160,x,0,asphalt);
+  roadPlane(1,160,x-2.7,0,sidewalk);
+  roadPlane(1,160,x+2.7,0,sidewalk);
+
+  for (let z = -76; z <= 76; z += 8) {
+    roadPlane(0.13,2.5,x,z,roadLine);
+  }
+}
+
+for (let i = 0; i < 9; i++) {
+  const z = -64 + i * 16;
+  roadPlane(160,4.4,0,z,asphalt);
+  roadPlane(160,1,0,z-2.7,sidewalk);
+  roadPlane(160,1,0,z+2.7,sidewalk);
+
+  for (let x = -76; x <= 76; x += 8) {
+    roadPlane(2.5,0.13,x,z,roadLine);
+  }
+}
+
+const roadGeometry = new THREE.PlaneGeometry(1,1);
+
+for (const type of Object.keys(roadItems)) {
+  const items = roadItems[type];
+  const mesh = new THREE.InstancedMesh(
+    roadGeometry,
+    roadMaterials[type],
+    items.length
+  );
+
+  const dummy = new THREE.Object3D();
+
+  items.forEach((item,i) => {
+    dummy.position.set(item.x,item.y,item.z);
+    dummy.rotation.set(-Math.PI/2,0,0);
+    dummy.scale.set(item.width,item.length,1);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i,dummy.matrix);
+  });
+
+  mesh.instanceMatrix.needsUpdate = true;
+  scene.add(mesh);
+}
+// UZB-CITY-ROADS-END
+
+function makeHouse(user,x,z){
+ const group=new THREE.Group();
+ const base=new THREE.Mesh(
+  new THREE.BoxGeometry(9,5,8),
+  new THREE.MeshStandardMaterial({color:0xe7c99a})
+ );
+ base.position.y=2.5;
+ group.add(base);
+
+ const roof=new THREE.Mesh(
+  new THREE.ConeGeometry(7,4,4),
+  new THREE.MeshStandardMaterial({color:0x9d493c})
+ );
+ roof.rotation.y=Math.PI/4;
+ roof.position.y=7;
+ group.add(roof);
+
+ const door=new THREE.Mesh(
+  new THREE.BoxGeometry(1.5,3,.2),
+  new THREE.MeshStandardMaterial({color:0x633b25})
+ );
+ door.position.set(0,1.5,4.1);
+ group.add(door);
+
+ const windowMaterial=new THREE.MeshStandardMaterial({color:0x7ec9e8});
+ for(const side of [-2.5,2.5]){
+  const win=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,.2),windowMaterial);
+  win.position.set(side,3.1,4.1);
+  group.add(win);
+ }
+
+
+ const c=document.createElement('canvas');
+ c.width=512; c.height=128;
+ const ctx=c.getContext('2d');
+ ctx.fillStyle='#17243d';
+ ctx.fillRect(0,0,512,128);
+ ctx.fillStyle='white';
+ ctx.font='bold 48px Arial';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+ ctx.fillText('@'+user,256,64);
+
+ const texture=new THREE.CanvasTexture(c);
+ const label=new THREE.Sprite(
+   new THREE.SpriteMaterial({map:texture})
+ );
+ label.position.set(0,12,0);
+ label.scale.set(12,3,1);
+ group.add(label);
+
+ group.position.set(x,0,z);
+ group.userData.username=user;
+ scene.add(group);
+ return group;
+}
+
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.enablePan = true;
+controls.screenSpacePanning = true;
+controls.enableRotate = true;
+controls.enableZoom = true;
+controls.minDistance = 12;
+controls.maxDistance = 250;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.panSpeed = 1.2;
+controls.rotateSpeed = 0.8;
+controls.zoomSpeed = 1.1;
+controls.target.set(0,0,0);
+controls.update();
+
+let myUser='';
+async function enterCity(){
+ const input=document.getElementById('username');
+ const error=document.getElementById('error');
+ const username=input.value.trim().replace(/^@/,'').toLowerCase();
+ if(!/^[a-z0-9._]{1,30}$/.test(username)){
+  error.textContent='Username noto‘g‘ri!';
+  return;
+ }
+ try{
+  const response=await fetch('/api/login',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({username})
+  });
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error);
+  myUser=username;
+  document.getElementById('myname').textContent='👤 @'+username;
+  document.getElementById('login').style.display='none';
+  await loadHouses();
+ }catch(e){
+  error.textContent=e.message||'Server bilan aloqa yo‘q';
+ }
+}
+window.enterCity=enterCity;
+
+
+// UZB-CITY-BOUNDARY-V1
+let cityBoundary = null;
+
+function updateCityBoundary(houses) {
+  if (cityBoundary) {
+    scene.remove(cityBoundary);
+    cityBoundary.traverse(obj => {
+      if (obj.isMesh) obj.geometry.dispose();
+    });
+  }
+
+  cityBoundary = new THREE.Group();
+
+  const positions = houses
+    .filter(h => h.house && Number.isFinite(Number(h.house.x)) && Number.isFinite(Number(h.house.z)))
+    .map(h => ({x:Number(h.house.x), z:Number(h.house.z)}));
+
+  if (!positions.length) return;
+
+  const minX = Math.min(...positions.map(p => p.x)) - 10;
+  const maxX = Math.max(...positions.map(p => p.x)) + 10;
+  const minZ = Math.min(...positions.map(p => p.z)) - 10;
+  const maxZ = Math.max(...positions.map(p => p.z)) + 10;
+
+  const width = maxX - minX;
+  const depth = maxZ - minZ;
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+
+  const height = 2.5;
+  const thickness = 0.7;
+
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2865b8,
+    emissive: 0x102b55,
+    transparent: true,
+    opacity: 0.72
+  });
+
+  function addWall(w, d, x, z) {
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(w, height, d),
+      wallMaterial
+    );
+    wall.position.set(x, height / 2, z);
+    cityBoundary.add(wall);
+  }
+
+  addWall(width + thickness, thickness, cx, minZ);
+  addWall(width + thickness, thickness, cx, maxZ);
+  addWall(thickness, depth + thickness, minX, cz);
+  addWall(thickness, depth + thickness, maxX, cz);
+
+  scene.add(cityBoundary);
+}
+// UZB-CITY-BOUNDARY-END
+
+async function loadHouses(){
+ const response=await fetch('/api/houses');
+ const houses=await response.json();
+ updateCityBoundary(houses);
+ houses.forEach(item=>{
+  makeHouse(item.username,item.house.x,item.house.z);
+ });
+ document.getElementById('count').textContent='🏠 Uylar: '+houses.length;
+ const mine=houses.find(h=>h.username===myUser);
+ if(mine){
+  controls.target.set(mine.house.x, 0, mine.house.z);
+  camera.position.set(mine.house.x+25, 25, mine.house.z+30);
+  controls.update();
+ }
+}
+function animate(){
+ requestAnimationFrame(animate);
+ controls.update();
+ renderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
