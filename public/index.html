@@ -231,9 +231,128 @@ for(let i=0;i<9;i++){
  makeCar(carColors[(i+4)%9],-direction,'x',-start,road+(direction>0?1:-1));
 }
 
-function updateCityCars(delta){
- for(const item of cityCars){
-  item.position+=item.direction*item.speed*delta;
+
+ // UZB-CITY-TRAFFIC-V1
+ let trafficElapsed = 0;
+ const trafficLights = [];
+
+ function makeTrafficHead(offsetX) {
+  const group = new THREE.Group();
+  group.position.x = offsetX;
+  const lamps = {};
+
+  for (const [name,color] of Object.entries({
+   red:0xff2222,
+   yellow:0xffcc00,
+   green:0x22ee55
+  })) {
+   const material = new THREE.MeshStandardMaterial({
+    color,
+    emissive:color,
+    emissiveIntensity:0.05
+   });
+
+   const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18,10,10),
+    material
+   );
+
+   lamp.position.y =
+    name==='red' ? 0.55 :
+    name==='yellow' ? 0 : -0.55;
+
+   group.add(lamp);
+   lamps[name]=material;
+  }
+
+  return {group,lamps};
+ }
+
+ function makeTrafficLight(x,z) {
+  const pole = new THREE.Group();
+  pole.position.set(x,0,z);
+
+  const post = new THREE.Mesh(
+   new THREE.CylinderGeometry(0.08,0.12,2.2,10),
+   new THREE.MeshStandardMaterial({color:0x30363b})
+  );
+  post.position.y=1.1;
+  pole.add(post);
+
+  const box = new THREE.Mesh(
+   new THREE.BoxGeometry(0.85,1.55,0.42),
+   new THREE.MeshStandardMaterial({color:0x20252b})
+  );
+  box.position.y=2.5;
+  pole.add(box);
+
+  const vertical=makeTrafficHead(-0.22);
+  const horizontal=makeTrafficHead(0.22);
+
+  vertical.group.position.y=2.5;
+  horizontal.group.position.y=2.5;
+
+  pole.add(vertical.group);
+  pole.add(horizontal.group);
+  scene.add(pole);
+
+  trafficLights.push({vertical,horizontal});
+ }
+
+ // Markaziy chorrahaning to‘rt burchagida
+ makeTrafficLight(-3.2,-3.2);
+ makeTrafficLight(3.2,-3.2);
+ makeTrafficLight(-3.2,3.2);
+ makeTrafficLight(3.2,3.2);
+
+ function setTrafficHead(head,state) {
+  for(const [name,material] of Object.entries(head.lamps)) {
+   material.emissiveIntensity =
+    name===state ? 1.8 : 0.04;
+  }
+ }
+
+ function updateTrafficLights(v,h) {
+  for(const light of trafficLights) {
+   setTrafficHead(light.vertical,v);
+   setTrafficHead(light.horizontal,h);
+  }
+ }
+ // UZB-CITY-TRAFFIC-END
+
+
+function updateCityCars(delta) {
+ trafficElapsed += delta;
+ const phase = trafficElapsed % 24;
+
+ const verticalGreen = phase < 10;
+ const verticalYellow = phase >= 10 && phase < 12;
+ const horizontalGreen = phase >= 12 && phase < 22;
+ const horizontalYellow = phase >= 22;
+
+ const v = verticalGreen ? 'green' :
+           verticalYellow ? 'yellow' : 'red';
+ const h = horizontalGreen ? 'green' :
+           horizontalYellow ? 'yellow' : 'red';
+
+ updateTrafficLights(v,h);
+
+ for(const item of cityCars) {
+  const green = item.axis==='z'
+   ? verticalGreen : horizontalGreen;
+
+  const next = item.direction > 0
+   ? (Math.floor(item.position/16)+1)*16
+   : (Math.ceil(item.position/16)-1)*16;
+
+  const distance = (next-item.position)*item.direction;
+  let movement = item.speed*delta;
+
+  if(!green && distance > 4.5) {
+   movement = Math.min(movement,distance-4.5);
+  }
+
+  item.position += item.direction*movement;
 
   if(item.position>78) item.position=-78;
   if(item.position< -78) item.position=78;
@@ -242,6 +361,7 @@ function updateCityCars(delta){
   else item.car.position.x=item.position;
  }
 }
+
 // UZB-CITY-CARS-END
 
 
