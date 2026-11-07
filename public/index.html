@@ -244,6 +244,104 @@ function updateCityCars(delta){
 }
 // UZB-CITY-CARS-END
 
+
+ // UZB-CITY-FOUNTAIN-V1
+ const cityFountain = new THREE.Group();
+ cityFountain.position.set(-8,0,-24);
+ scene.add(cityFountain);
+
+ // Favvora tagligi
+ const fountainBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.8,3.8,0.3,48),
+  new THREE.MeshStandardMaterial({color:0x777d85,roughness:0.8})
+ );
+ fountainBase.position.y=0.15;
+ cityFountain.add(fountainBase);
+
+ // Dumaloq hovuz devori
+ const fountainWall = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.8,3.8,0.65,48,1,true),
+  new THREE.MeshStandardMaterial({
+   color:0xb9c5d0,
+   side:THREE.DoubleSide,
+   roughness:0.65
+  })
+ );
+ fountainWall.position.y=0.48;
+ cityFountain.add(fountainWall);
+
+ // Moviy suv
+ const fountainWater = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.3,3.3,0.09,48),
+  new THREE.MeshStandardMaterial({
+   color:0x079bd1,
+   emissive:0x003c66,
+   emissiveIntensity:0.35,
+   metalness:0.3,
+   roughness:0.2
+  })
+ );
+ fountainWater.position.y=0.37;
+ cityFountain.add(fountainWater);
+
+ // Hovuzning bezak halqasi
+ const fountainRing = new THREE.Mesh(
+  new THREE.TorusGeometry(3.55,0.18,10,48),
+  new THREE.MeshStandardMaterial({color:0xd5dce3,metalness:0.35})
+ );
+ fountainRing.rotation.x=Math.PI/2;
+ fountainRing.position.y=0.75;
+ cityFountain.add(fountainRing);
+
+ // Markaziy ustun
+ const fountainCenter = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.42,0.55,0.75,24),
+  new THREE.MeshStandardMaterial({color:0xe0e5eb,metalness:0.4})
+ );
+ fountainCenter.position.y=0.76;
+ cityFountain.add(fountainCenter);
+
+ const fountainDrops=[];
+ const dropMaterial=new THREE.MeshStandardMaterial({
+  color:0x55d9ff,
+  emissive:0x0877bb,
+  emissiveIntensity:0.6
+ });
+
+ for(let i=0;i<28;i++){
+  const drop=new THREE.Mesh(
+   new THREE.SphereGeometry(0.075,8,8),
+   dropMaterial
+  );
+  cityFountain.add(drop);
+  fountainDrops.push({
+   mesh:drop,
+   phase:Math.random(),
+   angle:Math.random()*Math.PI*2
+  });
+ }
+
+ // Moviy dekorativ chiroq
+ const fountainLight=new THREE.PointLight(0x35bfff,2.5,15);
+ fountainLight.position.set(0,2,0);
+ cityFountain.add(fountainLight);
+
+ function updateCityFountain(delta){
+  for(const item of fountainDrops){
+   item.phase=(item.phase+delta*0.8)%1;
+   const t=item.phase;
+   const arc=Math.sin(t*Math.PI);
+   const radius=0.2+t*1.1;
+
+   item.mesh.position.set(
+    Math.cos(item.angle)*radius,
+    1.05+arc*2.5,
+    Math.sin(item.angle)*radius
+   );
+  }
+ }
+ // UZB-CITY-FOUNTAIN-END
+
 const houseObjects = [];
 let highlightedHouse = null;
 
@@ -473,6 +571,7 @@ function animate(){
  requestAnimationFrame(animate);
  const delta=Math.min(carClock.getDelta(),0.05);
  updateCityCars(delta);
+ updateCityFountain(delta);
  controls.update();
  renderer.render(scene,camera);
 }

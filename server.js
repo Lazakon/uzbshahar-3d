@@ -42,6 +42,9 @@ function getHousePosition(index) {
     }
 
     for (const [x,z] of cells) {
+      // Favvora maydoni: X=-8, Z=-24
+      if (x === -1 && z === -2) continue;
+
       if (count === index) {
         return {x: x * 16 + 8, z: z * 16 + 8};
       }
