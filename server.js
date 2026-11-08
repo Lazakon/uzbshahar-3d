@@ -27,7 +27,8 @@ const pool = new Pool({
 
 
 function getHousePosition(index) {
-  const columns = 8;
+  const columns = 30;
+  const rows = 27;
 
   if (!Number.isInteger(index) || index < 0 || index >= 800) {
     throw new Error("Mahallada 800 ta uy uchun joy ajratilgan");
@@ -35,19 +36,18 @@ function getHousePosition(index) {
 
   let count = 0;
 
-  for (let row = 0; row < 101; row++) {
+  for (let row = 0; row < rows; row++) {
     for (let col = 0; col < columns; col++) {
-      const x = col - 4;
-      const z = row - 4;
+      const x = (col - 15) * 16 + 8;
+      const z = (row - 13) * 16 + 8;
 
-      if (x === -1 && z === -2) continue;
+      // Favvora joyi bo'sh qoladi
+      if (x === -8 && z === -24) continue;
 
       if (count === index) {
-        return {
-          x: x * 16 + 8,
-          z: z * 16 + 8
-        };
+        return { x, z };
       }
+
       count++;
     }
   }
