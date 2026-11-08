@@ -767,7 +767,7 @@ async function loadHouses(){
   makeHouse(item.username,item.house.x,item.house.z,item.house.id);
  });
  buildVirtualHomes(houses);
- startVirtualPeople();
+ startVirtualPeople(houses);
  document.getElementById('count').textContent='🏠 Uylar: '+houses.length;
  const mine=houses.find(h=>h.username===myUser);
  if(mine){
@@ -827,13 +827,15 @@ scene.add(virtualPeopleGroup);
 
 const virtualPeople = [];
 let virtualPeopleStarted = false;
+let virtualPeopleHomes = [];
+let virtualPeopleHome = null;
 
 const personBodyGeometry = new THREE.CylinderGeometry(0.25,0.3,0.9,8);
 const personHeadGeometry = new THREE.SphereGeometry(0.22,8,8);
 const personMaterials = [0x3567a8,0x3b8b58,0xb36a35,0x7951a8,0x555b65]
  .map(color => new THREE.MeshStandardMaterial({color}));
 
-function addVirtualPerson() {
+function addVirtualPerson(preferredHome = null) {
  if(virtualPeople.length >= 100) return;
 
  const person = new THREE.Group();
@@ -852,7 +854,13 @@ function addVirtualPerson() {
  person.add(head);
 
  const row = Math.floor(Math.random()*100);
- person.position.set(Math.random()*110-55,0,(row-4)*16+12.95);
+ const home = preferredHome || virtualPeopleHomes[Math.floor(Math.random()*virtualPeopleHomes.length)];
+ const location = home && home.house ? home.house : {x:0,z:0};
+ person.position.set(
+  Number(location.x) + Math.random()*28-14,
+  0,
+  Number(location.z) + 9 + Math.random()*8
+ );
  person.userData.direction = Math.random()<0.5 ? 1 : -1;
  person.userData.speed = 1+Math.random()*1.2;
 
@@ -860,12 +868,15 @@ function addVirtualPerson() {
  virtualPeople.push(person);
 }
 
-function startVirtualPeople() {
+function startVirtualPeople(houses) {
  if(virtualPeopleStarted) return;
  virtualPeopleStarted = true;
 
- for(let i=0;i<15;i++) addVirtualPerson();
- setInterval(addVirtualPerson,5000);
+ virtualPeopleHomes = houses || [];
+ virtualPeopleHome = virtualPeopleHomes.find(h => h.username === myUser) || virtualPeopleHomes[0] || null;
+
+ for(let i=0;i<15;i++) addVirtualPerson(virtualPeopleHome);
+ setInterval(() => addVirtualPerson(),5000);
 }
 
 function updateVirtualPeople(delta) {
