@@ -25,6 +25,7 @@ const pool = new Pool({
 
 
 
+
 function getHousePosition(index) {
   const columns = 8;
 
