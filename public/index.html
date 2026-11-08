@@ -459,6 +459,42 @@ function updateCityCars(delta) {
  }
  // UZB-CITY-FOUNTAIN-END
 
+
+// UZB-MAHALLA-YOLAKLAR-START
+const mahallaPaths = new THREE.Group();
+scene.add(mahallaPaths);
+
+function addMahallaPath(x1,z1,x2,z2,width=3){
+ const dx=x2-x1, dz=z2-z1;
+ const length=Math.hypot(dx,dz);
+ const path=new THREE.Mesh(
+  new THREE.BoxGeometry(width,0.12,length),
+  new THREE.MeshStandardMaterial({color:0xc5bba6})
+ );
+ path.position.set((x1+x2)/2,0.07,(z1+z2)/2);
+ path.rotation.y=Math.atan2(dx,dz);
+ mahallaPaths.add(path);
+}
+
+function buildMahallaPaths(houses){
+ mahallaPaths.clear();
+ const rows={};
+ houses.forEach(h=>{
+  const x=Number(h.house.x);
+  const z=Number(h.house.z);
+  if(!Number.isFinite(x)||!Number.isFinite(z)) return;
+  const key=Math.round(z/12);
+  (rows[key]??=[]).push({x,z});
+ });
+ Object.values(rows).forEach(row=>{
+  row.sort((a,b)=>a.x-b.x);
+  for(let i=1;i<row.length;i++){
+   addMahallaPath(row[i-1].x,row[i-1].z,row[i].x,row[i].z,2.5);
+  }
+ });
+}
+// UZB-MAHALLA-YOLAKLAR-END
+
 const houseObjects = [];
 let highlightedHouse = null;
 
@@ -629,6 +665,7 @@ async function loadHouses(){
  const response=await fetch('/api/houses');
  const houses=await response.json();
  updateCityBoundary(houses);
+ buildMahallaPaths(houses);
  houses.forEach(item=>{
   makeHouse(item.username,item.house.x,item.house.z,item.house.id);
  });
