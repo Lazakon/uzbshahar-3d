@@ -113,9 +113,9 @@ const roadLine = roadMaterials.line;
 
 for (let i = 0; i < 9; i++) {
   const x = -64 + i * 16;
-  roadPlane(4.4,400,x,0,asphalt);
-  roadPlane(1,400,x-2.7,0,sidewalk);
-  roadPlane(1,400,x+2.7,0,sidewalk);
+  roadPlane(4.4,3400,x,0,asphalt);
+  roadPlane(1,3400,x-2.7,0,sidewalk);
+  roadPlane(1,3400,x+2.7,0,sidewalk);
 
   for (let z = -196; z <= 196; z += 8) {
     roadPlane(0.13,2.5,x,z,roadLine);

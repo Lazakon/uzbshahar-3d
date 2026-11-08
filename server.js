@@ -24,16 +24,21 @@ const pool = new Pool({
 });
 
 
+
 function getHousePosition(index) {
   const columns = 8;
+
+  if (!Number.isInteger(index) || index < 0 || index >= 800) {
+    throw new Error("Mahallada 800 ta uy uchun joy ajratilgan");
+  }
+
   let count = 0;
 
-  for (let row = 0; row < 10000; row++) {
+  for (let row = 0; row < 101; row++) {
     for (let col = 0; col < columns; col++) {
       const x = col - 4;
       const z = row - 4;
 
-      // Favvora uchun joy
       if (x === -1 && z === -2) continue;
 
       if (count === index) {
