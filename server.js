@@ -27,32 +27,20 @@ const pool = new Pool({
 
 
 function getHousePosition(index) {
-  const columns = 30;
-  const rows = 27;
-
   if (!Number.isInteger(index) || index < 0 || index >= 800) {
     throw new Error("Mahallada 800 ta uy uchun joy ajratilgan");
   }
 
-  let count = 0;
+  const street = Math.floor(index / 80);
+  const withinStreet = index % 80;
+  const side = withinStreet % 2;
+  const slot = Math.floor(withinStreet / 2);
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < columns; col++) {
-      const x = (col - 15) * 16 + 8;
-      const z = (row - 13) * 16 + 8;
+  const x = -224.25 + slot * 11.5;
+  const streetZ = -162 + street * 36;
+  const z = streetZ + (side === 0 ? -10 : 10);
 
-      // Favvora joyi bo'sh qoladi
-      if (x === -8 && z === -24) continue;
-
-      if (count === index) {
-        return { x, z };
-      }
-
-      count++;
-    }
-  }
-
-  throw new Error("Uy joylashuvi topilmadi");
+  return { x, z };
 }
 
 function formatUser(row) {

@@ -86,27 +86,20 @@ scene.add(grid);
 
 
 // UZB-CITY-ROADS-V1
-// OPTIMIZED ROADS
+// 10 ta parallel asosiy ko‘cha
 const roadMaterials = {
   asphalt: new THREE.MeshStandardMaterial({color:0x343a40}),
   sidewalk: new THREE.MeshStandardMaterial({color:0xb9b9b2}),
   line: new THREE.MeshStandardMaterial({color:0xf5f0d5})
 };
 
-const roadItems = {
-  asphalt: [],
-  sidewalk: [],
-  line: []
-};
+const roadItems = { asphalt: [], sidewalk: [], line: [] };
 
-function roadPlane(width, length, x, z, material) {
-  let type = material === roadMaterials.asphalt ? 'asphalt' :
-             material === roadMaterials.sidewalk ? 'sidewalk' : 'line';
-
-  let y = type === 'asphalt' ? (width < length ? 0.036 : 0.03) :
-          type === 'sidewalk' ? (width < length ? 0.05 : 0.045) :
-          (width < length ? 0.067 : 0.062);
-
+function roadPlane(width,length,x,z,material) {
+  const type = material === roadMaterials.asphalt ? 'asphalt' :
+               material === roadMaterials.sidewalk ? 'sidewalk' : 'line';
+  const y = type === 'asphalt' ? 0.036 :
+            type === 'sidewalk' ? 0.05 : 0.067;
   roadItems[type].push({width,length,x,z,y});
 }
 
@@ -114,24 +107,14 @@ const asphalt = roadMaterials.asphalt;
 const sidewalk = roadMaterials.sidewalk;
 const roadLine = roadMaterials.line;
 
-for (let i = 0; i < 9; i++) {
-  const x = -64 + i * 16;
-  roadPlane(4.4,3400,x,0,asphalt);
-  roadPlane(1,3400,x-2.7,0,sidewalk);
-  roadPlane(1,3400,x+2.7,0,sidewalk);
+for (let i=0; i<10; i++) {
+  const z = -162 + i*36;
 
-  for (let z = -196; z <= 196; z += 8) {
-    roadPlane(0.13,2.5,x,z,roadLine);
-  }
-}
+  roadPlane(470,8,0,z,asphalt);
+  roadPlane(470,1.2,0,z-5.2,sidewalk);
+  roadPlane(470,1.2,0,z+5.2,sidewalk);
 
-for (let i = 0; i < 21; i++) {
-  const z = -160 + i * 16;
-  roadPlane(160,4.4,0,z,asphalt);
-  roadPlane(160,1,0,z-2.7,sidewalk);
-  roadPlane(160,1,0,z+2.7,sidewalk);
-
-  for (let x = -76; x <= 76; x += 8) {
+  for(let x=-220; x<=220; x+=12) {
     roadPlane(2.5,0.13,x,z,roadLine);
   }
 }
@@ -141,11 +124,8 @@ const roadGeometry = new THREE.PlaneGeometry(1,1);
 for (const type of Object.keys(roadItems)) {
   const items = roadItems[type];
   const mesh = new THREE.InstancedMesh(
-    roadGeometry,
-    roadMaterials[type],
-    items.length
+    roadGeometry, roadMaterials[type], items.length
   );
-
   const dummy = new THREE.Object3D();
 
   items.forEach((item,i) => {
@@ -226,12 +206,10 @@ const carColors=[
  0x00acc1
 ];
 
-for(let i=0;i<9;i++){
- const road=-64+i*16;
- const direction=i%2===0 ? 1 : -1;
- const start=-68+i*17;
- makeCar(carColors[i],direction,'z',road,start);
- makeCar(carColors[(i+4)%9],-direction,'x',-start,road+(direction>0?1:-1));
+for(let i=0;i<10;i++){
+ const road=-162+i*36;
+ makeCar(carColors[i%carColors.length],1,'x',-210,road-1.4);
+ makeCar(carColors[(i+4)%carColors.length],-1,'x',210,road+1.4);
 }
 
 
@@ -354,8 +332,8 @@ function updateCityCars(delta) {
 
   item.position += item.direction * movement;
 
-  if(item.position > 78) item.position = -78;
-  if(item.position < -78) item.position = 78;
+  if(item.position > 230) item.position = -230;
+  if(item.position < -230) item.position = 230;
 
   if(item.axis === 'z') item.car.position.z = item.position;
   else item.car.position.x = item.position;
@@ -474,9 +452,6 @@ const mahallaPathMaterial = new THREE.MeshStandardMaterial({
 });
 
 function buildMahallaPaths(houses) {
- mahallaPaths.children.forEach(obj => {
-  if(obj.geometry) obj.geometry.dispose();
- });
  mahallaPaths.clear();
 
  const rows = new Map();
@@ -484,33 +459,28 @@ function buildMahallaPaths(houses) {
  houses.forEach(h => {
   const x = Number(h.house?.x);
   const z = Number(h.house?.z);
-
   if(!Number.isFinite(x) || !Number.isFinite(z)) return;
-
-  const key = Math.round((z-8)/16);
-
-  if(!rows.has(key)) rows.set(key,[]);
-  rows.get(key).push({x,z});
+  if(!rows.has(z)) rows.set(z,[]);
+  rows.get(z).push({x,z});
  });
 
  for(const row of rows.values()) {
   row.sort((a,b)=>a.x-b.x);
-
-  const minX = row[0].x-8;
-  const maxX = row[row.length-1].x+8;
+  const streetZ = -162 + Math.round((row[0].z + 162)/36)*36;
+  const direction = row[0].z < streetZ ? 1 : -1;
+  const minX = row[0].x-5;
+  const maxX = row[row.length-1].x+5;
 
   const path = new THREE.Mesh(
-   new THREE.BoxGeometry(maxX-minX,0.10,1.5),
+   new THREE.BoxGeometry(maxX-minX,0.10,1.2),
    mahallaPathMaterial
   );
 
-  // Uylarning old tomonidagi piyodalar yo'lagi
   path.position.set(
    (minX+maxX)/2,
    0.06,
-   row[0].z+4.95
+   row[0].z + direction*4.95
   );
-
   mahallaPaths.add(path);
  }
 }
@@ -572,6 +542,8 @@ function makeHouse(user,x,z,houseId){
  group.add(label);
 
  group.position.set(x,0,z);
+ const streetZ = -162 + Math.round((z+162)/36)*36;
+ if(z > streetZ) group.rotation.y = Math.PI;
  group.userData.username = user;
  group.userData.houseId = Number(houseId);
  group.userData.originalColor = base.material.color.clone();
