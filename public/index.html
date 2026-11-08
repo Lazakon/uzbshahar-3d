@@ -767,6 +767,7 @@ async function loadHouses(){
   makeHouse(item.username,item.house.x,item.house.z,item.house.id);
  });
  buildVirtualHomes(houses);
+ startVirtualPeople();
  document.getElementById('count').textContent='🏠 Uylar: '+houses.length;
  const mine=houses.find(h=>h.username===myUser);
  if(mine){
@@ -819,11 +820,76 @@ async function findHouse(){
 }
 window.findHouse = findHouse;
 
+
+// UZB-VIRTUAL-PEOPLE-START
+const virtualPeopleGroup = new THREE.Group();
+scene.add(virtualPeopleGroup);
+
+const virtualPeople = [];
+let virtualPeopleStarted = false;
+
+const personBodyGeometry = new THREE.CylinderGeometry(0.25,0.3,0.9,8);
+const personHeadGeometry = new THREE.SphereGeometry(0.22,8,8);
+const personMaterials = [0x3567a8,0x3b8b58,0xb36a35,0x7951a8,0x555b65]
+ .map(color => new THREE.MeshStandardMaterial({color}));
+
+function addVirtualPerson() {
+ if(virtualPeople.length >= 100) return;
+
+ const person = new THREE.Group();
+ const body = new THREE.Mesh(
+  personBodyGeometry,
+  personMaterials[Math.floor(Math.random()*personMaterials.length)]
+ );
+ body.position.y = 0.75;
+ person.add(body);
+
+ const head = new THREE.Mesh(
+  personHeadGeometry,
+  new THREE.MeshStandardMaterial({color:0xd6a477})
+ );
+ head.position.y = 1.4;
+ person.add(head);
+
+ const row = Math.floor(Math.random()*100);
+ person.position.set(Math.random()*110-55,0,(row-4)*16+12.95);
+ person.userData.direction = Math.random()<0.5 ? 1 : -1;
+ person.userData.speed = 1+Math.random()*1.2;
+
+ virtualPeopleGroup.add(person);
+ virtualPeople.push(person);
+}
+
+function startVirtualPeople() {
+ if(virtualPeopleStarted) return;
+ virtualPeopleStarted = true;
+
+ for(let i=0;i<15;i++) addVirtualPerson();
+ setInterval(addVirtualPerson,5000);
+}
+
+function updateVirtualPeople(delta) {
+ virtualPeople.forEach(person => {
+  person.position.x += person.userData.direction*person.userData.speed*delta;
+
+  if(person.position.x > 62) {
+   person.position.x = 62;
+   person.userData.direction = -1;
+  }
+  if(person.position.x < -62) {
+   person.position.x = -62;
+   person.userData.direction = 1;
+  }
+ });
+}
+// UZB-VIRTUAL-PEOPLE-END
+
 function animate(){
  requestAnimationFrame(animate);
  const delta=Math.min(carClock.getDelta(),0.05);
  updateCityCars(delta);
  updateCityFountain(delta);
+ updateVirtualPeople(delta);
  controls.update();
  renderer.render(scene,camera);
 }
