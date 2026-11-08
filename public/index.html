@@ -113,17 +113,17 @@ const roadLine = roadMaterials.line;
 
 for (let i = 0; i < 9; i++) {
   const x = -64 + i * 16;
-  roadPlane(4.4,160,x,0,asphalt);
-  roadPlane(1,160,x-2.7,0,sidewalk);
-  roadPlane(1,160,x+2.7,0,sidewalk);
+  roadPlane(4.4,400,x,0,asphalt);
+  roadPlane(1,400,x-2.7,0,sidewalk);
+  roadPlane(1,400,x+2.7,0,sidewalk);
 
-  for (let z = -76; z <= 76; z += 8) {
+  for (let z = -196; z <= 196; z += 8) {
     roadPlane(0.13,2.5,x,z,roadLine);
   }
 }
 
-for (let i = 0; i < 9; i++) {
-  const z = -64 + i * 16;
+for (let i = 0; i < 21; i++) {
+  const z = -160 + i * 16;
   roadPlane(160,4.4,0,z,asphalt);
   roadPlane(160,1,0,z-2.7,sidewalk);
   roadPlane(160,1,0,z+2.7,sidewalk);
@@ -460,40 +460,59 @@ function updateCityCars(delta) {
  // UZB-CITY-FOUNTAIN-END
 
 
+
 // UZB-MAHALLA-YOLAKLAR-START
 const mahallaPaths = new THREE.Group();
 scene.add(mahallaPaths);
 
-function addMahallaPath(x1,z1,x2,z2,width=3){
- const dx=x2-x1, dz=z2-z1;
- const length=Math.hypot(dx,dz);
- const path=new THREE.Mesh(
-  new THREE.BoxGeometry(width,0.12,length),
-  new THREE.MeshStandardMaterial({color:0xc5bba6})
- );
- path.position.set((x1+x2)/2,0.07,(z1+z2)/2);
- path.rotation.y=Math.atan2(dx,dz);
- mahallaPaths.add(path);
-}
+const mahallaPathMaterial = new THREE.MeshStandardMaterial({
+ color:0xd8c6a4,
+ roughness:1
+});
 
-function buildMahallaPaths(houses){
+function buildMahallaPaths(houses) {
+ mahallaPaths.children.forEach(obj => {
+  if(obj.geometry) obj.geometry.dispose();
+ });
  mahallaPaths.clear();
- const rows={};
- houses.forEach(h=>{
-  const x=Number(h.house.x);
-  const z=Number(h.house.z);
-  if(!Number.isFinite(x)||!Number.isFinite(z)) return;
-  const key=Math.round(z/12);
-  (rows[key]??=[]).push({x,z});
+
+ const rows = new Map();
+
+ houses.forEach(h => {
+  const x = Number(h.house?.x);
+  const z = Number(h.house?.z);
+
+  if(!Number.isFinite(x) || !Number.isFinite(z)) return;
+
+  const key = Math.round((z-8)/16);
+
+  if(!rows.has(key)) rows.set(key,[]);
+  rows.get(key).push({x,z});
  });
- Object.values(rows).forEach(row=>{
+
+ for(const row of rows.values()) {
   row.sort((a,b)=>a.x-b.x);
-  for(let i=1;i<row.length;i++){
-   addMahallaPath(row[i-1].x,row[i-1].z,row[i].x,row[i].z,2.5);
-  }
- });
+
+  const minX = row[0].x-8;
+  const maxX = row[row.length-1].x+8;
+
+  const path = new THREE.Mesh(
+   new THREE.BoxGeometry(maxX-minX,0.10,1.5),
+   mahallaPathMaterial
+  );
+
+  // Uylarning old tomonidagi piyodalar yo'lagi
+  path.position.set(
+   (minX+maxX)/2,
+   0.06,
+   row[0].z+4.95
+  );
+
+  mahallaPaths.add(path);
+ }
 }
 // UZB-MAHALLA-YOLAKLAR-END
+
 
 const houseObjects = [];
 let highlightedHouse = null;

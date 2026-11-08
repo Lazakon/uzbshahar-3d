@@ -23,36 +23,30 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+
 function getHousePosition(index) {
+  const columns = 8;
   let count = 0;
 
-  for (let r = 0; r < 1000; r++) {
-    let cells = [];
+  for (let row = 0; row < 10000; row++) {
+    for (let col = 0; col < columns; col++) {
+      const x = col - 4;
+      const z = row - 4;
 
-    if (r === 0) {
-      cells = [[-1,-1], [0,0], [0,-1], [-1,0]];
-    } else {
-      const min = -r - 1;
-      const max = r;
-
-      for (let x = min; x <= max; x++) cells.push([x,min]);
-      for (let z = min+1; z <= max; z++) cells.push([max,z]);
-      for (let x = max-1; x >= min; x--) cells.push([x,max]);
-      for (let z = max-1; z > min; z--) cells.push([min,z]);
-    }
-
-    for (const [x,z] of cells) {
-      // Favvora maydoni: X=-8, Z=-24
+      // Favvora uchun joy
       if (x === -1 && z === -2) continue;
 
       if (count === index) {
-        return {x: x * 16 + 8, z: z * 16 + 8};
+        return {
+          x: x * 16 + 8,
+          z: z * 16 + 8
+        };
       }
       count++;
     }
   }
 
-  throw new Error('Uy joylashuvi topilmadi');
+  throw new Error("Uy joylashuvi topilmadi");
 }
 
 function formatUser(row) {
@@ -125,21 +119,26 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
 app.get('/api/houses', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM users ORDER BY sort_order NULLS LAST, house_id'
     );
 
-    res.json(result.rows.map(row => ({
-      username: row.username,
-      house: {
-        id: Number(row.house_id),
-        type: row.house_type,
-        x: Number(row.house_x),
-        z: Number(row.house_z)
-      }
-    })));
+    res.json(result.rows.map((row, index) => {
+      const pos = getHousePosition(index);
+
+      return {
+        username: row.username,
+        house: {
+          id: Number(row.house_id),
+          type: row.house_type,
+          x: pos.x,
+          z: pos.z
+        }
+      };
+    }));
   } catch (e) {
     console.error(e);
     res.status(500).json({error: 'Server xatosi'});
