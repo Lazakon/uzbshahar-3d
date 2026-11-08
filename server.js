@@ -216,6 +216,10 @@ app.put('/api/profile', async (req, res) => {
   }
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', app: 'UZB SHAHAR 3D' });
+});
+
 app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
   console.log('UZB SHAHAR 3D server ishga tushdi!');
 });
