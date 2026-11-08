@@ -491,51 +491,117 @@ const houseObjects = [];
 let highlightedHouse = null;
 
 function makeHouse(user,x,z,houseId){
- const group=new THREE.Group();
- const base=new THREE.Mesh(
-  new THREE.BoxGeometry(9,5,8),
-  new THREE.MeshStandardMaterial({color:0xe7c99a})
- );
- base.position.y=2.5;
- group.add(base);
+ const group = new THREE.Group();
 
- const roof=new THREE.Mesh(
-  new THREE.ConeGeometry(7,4,4),
-  new THREE.MeshStandardMaterial({color:0x9d493c})
- );
- roof.rotation.y=Math.PI/4;
- roof.position.y=7;
- group.add(roof);
+ const wallMat = new THREE.MeshStandardMaterial({
+  color:0xd9b58a, roughness:0.92
+ });
+ const brickMat = new THREE.MeshStandardMaterial({
+  color:0x985b43, roughness:0.95
+ });
+ const roofMat = new THREE.MeshStandardMaterial({
+  color:0x71382f, roughness:0.88
+ });
+ const woodMat = new THREE.MeshStandardMaterial({
+  color:0x593522, roughness:0.8
+ });
+ const frameMat = new THREE.MeshStandardMaterial({
+  color:0xf0dfc3, roughness:0.75
+ });
+ const glassMat = new THREE.MeshStandardMaterial({
+  color:0x72b9d2, metalness:0.25, roughness:0.18
+ });
+ const darkMat = new THREE.MeshStandardMaterial({
+  color:0x292b2c, roughness:0.65
+ });
 
- const door=new THREE.Mesh(
-  new THREE.BoxGeometry(1.5,3,.2),
-  new THREE.MeshStandardMaterial({color:0x633b25})
- );
- door.position.set(0,1.5,4.1);
- group.add(door);
-
- const windowMaterial=new THREE.MeshStandardMaterial({color:0x7ec9e8});
- for(const side of [-2.5,2.5]){
-  const win=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,.2),windowMaterial);
-  win.position.set(side,3.1,4.1);
-  group.add(win);
+ function addBox(w,h,d,material,x,y,z){
+  const mesh = new THREE.Mesh(
+   new THREE.BoxGeometry(w,h,d), material
+  );
+  mesh.position.set(x,y,z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
  }
 
+ // Poydevor va asosiy devorlar
+ addBox(9.35,0.45,8.35,brickMat,0,0.23,0);
+ addBox(9,5,8,wallMat,0,2.75,0);
 
- const c=document.createElement('canvas');
- c.width=512; c.height=128;
- const ctx=c.getContext('2d');
- ctx.fillStyle='#17243d';
+ // Devorning old qismidagi g‘isht bezagi
+ addBox(9.05,0.35,0.12,brickMat,0,0.65,4.04);
+ addBox(9.05,0.22,0.12,brickMat,0,4.85,4.04);
+
+ // Ikki qiyalikli tom
+ const roofA = addBox(9.8,0.35,5.5,roofMat,0,6.55,1.95);
+ roofA.rotation.x = 0.48;
+
+ const roofB = addBox(9.8,0.35,5.5,roofMat,0,6.55,-1.95);
+ roofB.rotation.x = -0.48;
+
+ // Tom chetidagi bezaklar
+ addBox(9.9,0.22,0.22,woodMat,0,5.95,4.55);
+ addBox(9.9,0.22,0.22,woodMat,0,5.95,-4.55);
+
+ // Mo‘ri
+ addBox(0.9,2,0.9,brickMat,3.1,7.2,-1.5);
+ addBox(1.15,0.2,1.15,woodMat,3.1,8.25,-1.5);
+
+ // Eshik romi va eshik
+ addBox(1.9,3.35,0.22,frameMat,0,1.72,4.08);
+ addBox(1.5,3,0.16,woodMat,0,1.55,4.22);
+ addBox(0.08,0.12,0.08,frameMat,0.48,1.55,4.34);
+
+ // Eshik ustidagi kichik soyabon
+ addBox(2.3,0.18,0.9,roofMat,0,3.55,4.45);
+
+ // Ikki old deraza: rom, oyna va kesishma bezaklari
+ for(const side of [-2.65,2.65]){
+  addBox(1.95,1.95,0.2,frameMat,side,3.15,4.08);
+  addBox(1.62,1.62,0.12,glassMat,side,3.15,4.2);
+
+  addBox(0.09,1.7,0.08,woodMat,side,3.15,4.29);
+  addBox(1.7,0.09,0.08,woodMat,side,3.15,4.29);
+
+  addBox(2.1,0.14,0.28,woodMat,side,4.2,4.18);
+ }
+
+ // Kirish zinapoyasi
+ addBox(2.5,0.22,1.1,frameMat,0,0.11,4.85);
+ addBox(2.1,0.2,0.65,frameMat,0,0.31,4.55);
+
+ // Uy oldidagi kichik chiroqlar
+ for(const side of [-1.65,1.65]){
+  addBox(0.22,0.38,0.18,darkMat,side,4.05,4.18);
+  const lamp = new THREE.Mesh(
+   new THREE.BoxGeometry(0.13,0.18,0.1),
+   new THREE.MeshStandardMaterial({
+    color:0xffdf91, emissive:0xffb84d,
+    emissiveIntensity:0.35
+   })
+  );
+  lamp.position.set(side,4.05,4.3);
+  group.add(lamp);
+ }
+
+ // Foydalanuvchi nomi
+ const c = document.createElement('canvas');
+ c.width = 512;
+ c.height = 128;
+ const ctx = c.getContext('2d');
+ ctx.fillStyle = '#17243d';
  ctx.fillRect(0,0,512,128);
- ctx.fillStyle='white';
- ctx.font='bold 48px Arial';
- ctx.textAlign='center';
- ctx.textBaseline='middle';
+ ctx.fillStyle = 'white';
+ ctx.font = 'bold 48px Arial';
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
  ctx.fillText('@'+user,256,64);
 
- const texture=new THREE.CanvasTexture(c);
- const label=new THREE.Sprite(
-   new THREE.SpriteMaterial({map:texture})
+ const texture = new THREE.CanvasTexture(c);
+ const label = new THREE.Sprite(
+  new THREE.SpriteMaterial({map:texture})
  );
  label.position.set(0,12,0);
  label.scale.set(12,3,1);
@@ -544,15 +610,14 @@ function makeHouse(user,x,z,houseId){
  group.position.set(x,0,z);
  const streetZ = -162 + Math.round((z+162)/36)*36;
  if(z > streetZ) group.rotation.y = Math.PI;
+
  group.userData.username = user;
  group.userData.houseId = Number(houseId);
- group.userData.originalColor = base.material.color.clone();
+ group.userData.originalColor = wallMat.color.clone();
  houseObjects.push(group);
- group.userData.username=user;
  scene.add(group);
  return group;
 }
-
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
