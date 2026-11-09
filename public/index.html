@@ -281,11 +281,11 @@ for(let i=0;i<10;i++){
   trafficLights.push({vertical,horizontal});
  }
 
- // Markaziy chorrahaning to‘rt burchagida
- makeTrafficLight(-3.2,-3.2);
- makeTrafficLight(3.2,-3.2);
- makeTrafficLight(-3.2,3.2);
- makeTrafficLight(3.2,3.2);
+ // Yo‘l chetidagi svetoforlar
+ makeTrafficLight(-45,-23.2);
+ makeTrafficLight(45,-23.2);
+ makeTrafficLight(-45,-12.8);
+ makeTrafficLight(45,-12.8);
 
  function setTrafficHead(head,state) {
   for(const [name,material] of Object.entries(head.lamps)) {
@@ -345,7 +345,7 @@ function updateCityCars(delta) {
 
  // UZB-CITY-FOUNTAIN-V1
  const cityFountain = new THREE.Group();
- cityFountain.position.set(-8,0,-29);
+ cityFountain.position.set(-36,0,-36);
  scene.add(cityFountain);
 
  // Favvora tagligi
