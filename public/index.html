@@ -619,6 +619,323 @@ function makeHouse(user,x,z,houseId){
  return group;
 }
 
+
+// UZB-GOVERNMENT-CENTER-V1
+// 15 ta davlat idorasi va markaziy maydon
+
+const governmentCenter = new THREE.Group();
+scene.add(governmentCenter);
+
+const govMaterials = {
+ wall: new THREE.MeshStandardMaterial({color:0xe5dfd0,roughness:0.8}),
+ white: new THREE.MeshStandardMaterial({color:0xf5f1e8}),
+ roof: new THREE.MeshStandardMaterial({color:0x35475c}),
+ glass: new THREE.MeshStandardMaterial({
+  color:0x58a6c8,metalness:0.35,roughness:0.2
+ }),
+ gold: new THREE.MeshStandardMaterial({
+  color:0xd7a83f,metalness:0.55,roughness:0.35
+ }),
+ stone: new THREE.MeshStandardMaterial({color:0x9da6ad}),
+ dark: new THREE.MeshStandardMaterial({color:0x303b47}),
+ green: new THREE.MeshStandardMaterial({color:0x397b42}),
+ trunk: new THREE.MeshStandardMaterial({color:0x76502f}),
+ road: new THREE.MeshStandardMaterial({color:0x343a40}),
+ line: new THREE.MeshStandardMaterial({color:0xf5e5a0})
+};
+
+function govBox(parent,w,h,d,mat,x,y,z) {
+ const m = new THREE.Mesh(
+  new THREE.BoxGeometry(w,h,d),mat
+ );
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ parent.add(m);
+ return m;
+}
+
+// Davlat binolarini qurish
+function buildGovernmentBuilding(name,x,z,main=false) {
+ const g = new THREE.Group();
+
+ const w = main ? 19 : 15;
+ const d = main ? 14 : 12;
+ const h = main ? 10 : 7.5;
+
+ // Poydevor
+ govBox(g,w+1,0.6,d+1,govMaterials.stone,0,0.3,0);
+
+ // Asosiy bino
+ govBox(g,w,h,d,govMaterials.wall,0,0.6+h/2,0);
+
+ // Yuqori tom
+ govBox(g,w+1,0.65,d+1,govMaterials.roof,0,h+0.9,0);
+
+ // Old fasaddagi oynalar
+ for(let floor=0;floor<2;floor++) {
+  for(let i=-1;i<=1;i++) {
+   govBox(
+    g,2.4,2.1,0.16,
+    govMaterials.glass,
+    i*(main?4:3.5),
+    2.5+floor*3.3,
+    d/2+0.09
+   );
+
+   govBox(
+    g,2.7,0.13,0.2,
+    govMaterials.gold,
+    i*(main?4:3.5),
+    3.65+floor*3.3,
+    d/2+0.12
+   );
+  }
+ }
+
+ // Kirish ustunlari
+ for(let i=-2;i<=2;i++) {
+  const pillar = new THREE.Mesh(
+   new THREE.CylinderGeometry(0.38,0.48,h*0.57,12),
+   govMaterials.white
+  );
+  pillar.position.set(i*(main?3:2.5),h*0.29,d/2+0.45);
+  pillar.castShadow=true;
+  g.add(pillar);
+ }
+
+ // Katta kirish eshigi
+ govBox(g,2.5,3.5,0.25,govMaterials.dark,0,1.85,d/2+0.2);
+
+ // Balkon va fasad bezagi
+ govBox(g,w+0.5,0.25,0.5,govMaterials.gold,0,h+0.2,d/2+0.2);
+
+ // Nom yozuvi
+ const canvas=document.createElement('canvas');
+ canvas.width=1024;
+ canvas.height=256;
+ const ctx=canvas.getContext('2d');
+
+ ctx.fillStyle='#172b43';
+ ctx.fillRect(0,0,1024,256);
+ ctx.fillStyle='#f5d47c';
+ ctx.font='bold 65px Arial';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+ ctx.fillText(name,512,128);
+
+ const texture=new THREE.CanvasTexture(canvas);
+ const sign=new THREE.Sprite(
+  new THREE.SpriteMaterial({map:texture})
+ );
+ sign.position.set(0,h+2.5,d/2+0.8);
+ sign.scale.set(main?17:14,3.5,1);
+ g.add(sign);
+
+ // Davlat bayrog‘i ustuni
+ const pole=new THREE.Mesh(
+  new THREE.CylinderGeometry(0.08,0.08,7,8),
+  govMaterials.gold
+ );
+ pole.position.set(0,h+4,0);
+ g.add(pole);
+
+ const flag=new THREE.Mesh(
+  new THREE.BoxGeometry(2.6,1.5,0.06),
+  new THREE.MeshStandardMaterial({
+   color:0x1685cb,
+   side:THREE.DoubleSide
+  })
+ );
+ flag.position.set(1.25,h+6.2,0);
+ g.add(flag);
+
+ g.position.set(x,0,z);
+ governmentCenter.add(g);
+ return g;
+}
+
+// 15 ta davlat idorasi
+const governmentBuildings = [
+ ["Parlament",-50,-144],
+ ["Prezident administratsiyasi",-25,-144],
+ ["Sud binosi",0,-144],
+ ["Prokuratura",25,-144],
+ ["Ichki ishlar",-50,-108],
+
+ ["Favqulodda vaziyatlar",-25,-108],
+ ["Soliq boshqarmasi",0,-108],
+ ["Adliya boshqarmasi",25,-108],
+ ["Davlat xizmatlari",50,-108],
+ ["FHDYO",50,-144],
+
+ ["HOKIMIYAT",0,-72],
+ ["Kadastr boshqarmasi",-50,-72],
+ ["Bojxona boshqarmasi",-25,-72],
+ ["Statistika boshqarmasi",25,-72],
+ ["Davlat idorasi",50,-72]
+];
+
+governmentBuildings.forEach((item)=>{
+ buildGovernmentBuilding(
+  item[0],item[1],item[2],item[0]==="HOKIMIYAT"
+ );
+});
+
+// Markaziy tantanali maydon
+const centralPlaza=new THREE.Group();
+centralPlaza.position.set(0,0,-36);
+governmentCenter.add(centralPlaza);
+
+govBox(
+ centralPlaza,54,0.35,24,
+ govMaterials.stone,0,0.12,0
+);
+
+// Maydon ichidagi yo‘laklar
+for(let i=-2;i<=2;i++) {
+ govBox(
+  centralPlaza,0.18,0.04,20,
+  govMaterials.gold,i*8,0.32,0
+ );
+}
+
+// Markaziy monument
+govBox(
+ centralPlaza,5,0.8,5,
+ govMaterials.gold,0,0.8,0
+);
+
+const monument=new THREE.Mesh(
+ new THREE.CylinderGeometry(0.5,0.9,7,12),
+ govMaterials.white
+);
+monument.position.set(0,4.7,0);
+centralPlaza.add(monument);
+
+// Monument ustidagi shar
+const monumentTop=new THREE.Mesh(
+ new THREE.SphereGeometry(1,16,12),
+ govMaterials.gold
+);
+monumentTop.position.y=8.5;
+monumentTop.position.x=0;
+monumentTop.position.z=0;
+centralPlaza.add(monumentTop);
+
+// Maydon bayroqlari
+for(const x of [-22,22]) {
+ const pole=new THREE.Mesh(
+  new THREE.CylinderGeometry(0.1,0.13,9,8),
+  govMaterials.gold
+ );
+ pole.position.set(x,4.5,0);
+ centralPlaza.add(pole);
+
+ const flag=new THREE.Mesh(
+  new THREE.BoxGeometry(3,1.7,0.08),
+  new THREE.MeshStandardMaterial({
+   color:0x1685cb,side:THREE.DoubleSide
+  })
+ );
+ flag.position.set(x+1.4,7.5,0);
+ centralPlaza.add(flag);
+}
+
+// Daraxtlar
+function addGovernmentTree(x,z) {
+ const tree=new THREE.Group();
+
+ const trunk=new THREE.Mesh(
+  new THREE.CylinderGeometry(0.3,0.45,2.5,8),
+  govMaterials.trunk
+ );
+ trunk.position.y=1.25;
+ tree.add(trunk);
+
+ const crown=new THREE.Mesh(
+  new THREE.SphereGeometry(1.8,10,8),
+  govMaterials.green
+ );
+ crown.position.y=3.3;
+ crown.scale.set(1,1.2,1);
+ tree.add(crown);
+
+ tree.position.set(x,0,z);
+ governmentCenter.add(tree);
+}
+
+for(let x=-25;x<=25;x+=10) {
+ addGovernmentTree(x,-23);
+ addGovernmentTree(x,-49);
+}
+
+// Davlat markazi avtoturargohi
+const govParking=new THREE.Group();
+govParking.position.set(87,0,-108);
+governmentCenter.add(govParking);
+
+govBox(
+ govParking,27,0.2,20,
+ govMaterials.road,0,0.1,0
+);
+
+// Avtoturargoh chiziqlari
+for(let i=-5;i<=5;i++) {
+ govBox(
+  govParking,0.12,0.04,17,
+  govMaterials.line,i*2.3,0.23,0
+ );
+}
+
+// Avtomobillar
+for(let i=0;i<8;i++) {
+ const car=new THREE.Group();
+
+ govBox(
+  car,1.5,0.65,3,
+  new THREE.MeshStandardMaterial({
+   color:[0xffffff,0x263d60,0x9d3434,0x333333][i%4]
+  }),0,0.65,0
+ );
+
+ govBox(
+  car,1.2,0.55,1.4,
+  govMaterials.glass,0,1.2,-0.1
+ );
+
+ car.position.set(-10+(i%4)*6,0,-5+Math.floor(i/4)*10);
+ govParking.add(car);
+}
+
+// Majmua atrofidagi yoritgichlar
+for(let x=-50;x<=50;x+=20) {
+ const lamp=new THREE.Group();
+
+ const pole=new THREE.Mesh(
+  new THREE.CylinderGeometry(0.09,0.14,5,8),
+  govMaterials.dark
+ );
+ pole.position.y=2.5;
+ lamp.add(pole);
+
+ const light=new THREE.Mesh(
+  new THREE.SphereGeometry(0.35,8,8),
+  new THREE.MeshStandardMaterial({
+   color:0xffe6a0,
+   emissive:0xffbd55,
+   emissiveIntensity:0.7
+  })
+ );
+ light.position.y=5.1;
+ lamp.add(light);
+
+ lamp.position.set(x,0,-20);
+ governmentCenter.add(lamp);
+}
+
+// UZB-GOVERNMENT-CENTER-END
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
