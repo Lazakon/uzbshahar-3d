@@ -936,6 +936,402 @@ for(let x=-50;x<=50;x+=20) {
 
 // UZB-GOVERNMENT-CENTER-END
 
+
+// UZB-CITY-REALISM-V1
+// Katta realistik shahar yangilanishi
+
+const realismCity = new THREE.Group();
+scene.add(realismCity);
+
+const R = {
+ wall: new THREE.MeshStandardMaterial({color:0xd9d8d1,roughness:0.8}),
+ white: new THREE.MeshStandardMaterial({color:0xf4f0e7}),
+ glass: new THREE.MeshStandardMaterial({color:0x55a9c9,metalness:0.3,roughness:0.2}),
+ darkGlass: new THREE.MeshStandardMaterial({color:0x263e55,metalness:0.4,roughness:0.25}),
+ roof: new THREE.MeshStandardMaterial({color:0x354454}),
+ gold: new THREE.MeshStandardMaterial({color:0xc69b48,metalness:0.4}),
+ green: new THREE.MeshStandardMaterial({color:0x397b42}),
+ grass: new THREE.MeshStandardMaterial({color:0x67975a}),
+ trunk: new THREE.MeshStandardMaterial({color:0x79502e}),
+ stone: new THREE.MeshStandardMaterial({color:0xb5b4ad}),
+ asphalt: new THREE.MeshStandardMaterial({color:0x343a40}),
+ yellow: new THREE.MeshStandardMaterial({color:0xe8bb45}),
+ wood: new THREE.MeshStandardMaterial({color:0x805b3c})
+};
+
+function rBox(parent,w,h,d,mat,x,y,z) {
+ const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+ m.position.set(x,y,z);
+ m.castShadow = true;
+ m.receiveShadow = true;
+ parent.add(m);
+ return m;
+}
+
+function rLabel(parent,name,x,y,z,width=12) {
+ const c=document.createElement('canvas');
+ c.width=512;
+ c.height=128;
+ const ctx=c.getContext('2d');
+
+ ctx.fillStyle='#172b43';
+ ctx.fillRect(0,0,512,128);
+ ctx.fillStyle='#ffffff';
+ ctx.font='bold 38px Arial';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+ ctx.fillText(name,256,64);
+
+ const texture=new THREE.CanvasTexture(c);
+ const sprite=new THREE.Sprite(
+  new THREE.SpriteMaterial({map:texture})
+ );
+ sprite.position.set(x,y,z);
+ sprite.scale.set(width,3,1);
+ parent.add(sprite);
+}
+
+// Turli arxitekturadagi binolar
+function makeRealBuilding(name,x,z,style,index) {
+ const g=new THREE.Group();
+
+ const colors=[
+  0xd8d2c5,0xe3dfd5,0xb8c9cf,
+  0xc9b9a4,0xd4dce0,0xc6c8bd
+ ];
+
+ const wall=new THREE.MeshStandardMaterial({
+  color:colors[index%colors.length],
+  roughness:0.75
+ });
+
+ const w=style==='hotel'?20:style==='residential'?16:18;
+ const d=style==='hotel'?15:13;
+ const h=style==='hotel'?19:style==='residential'?12:11;
+
+ // Poydevor
+ rBox(g,w+1,0.7,d+1,R.stone,0,0.35,0);
+
+ // Asosiy bino
+ rBox(g,w,h,d,wall,0,h/2+0.7,0);
+
+ // Tom
+ rBox(g,w+0.7,0.5,d+0.7,R.roof,0,h+0.95,0);
+
+ // Fasaddagi oynalar
+ const floors=style==='hotel'?5:3;
+ for(let floor=0;floor<floors;floor++) {
+  for(let col=-1;col<=1;col++) {
+   rBox(
+    g,2.8,1.8,0.14,
+    index%2===0?R.glass:R.darkGlass,
+    col*4,
+    2.3+floor*3,
+    d/2+0.09
+   );
+  }
+ }
+
+ // Kirish eshigi
+ rBox(g,3,3.2,0.2,R.darkGlass,0,2.3,d/2+0.15);
+
+ // Kirish soyaboni
+ rBox(g,5,0.3,2,R.roof,0,4,d/2+0.7);
+
+ // Yon fasad bezaklari
+ for(const side of [-1,1]) {
+  rBox(g,0.25,h,0.25,R.gold,side*(w/2-0.4),h/2+0.7,d/2+0.1);
+ }
+
+ // Mehmonxona tomidagi bezak
+ if(style==='hotel') {
+  rBox(g,8,1,8,R.gold,0,h+1.7,0);
+ }
+
+ // Uylarning balkonlari
+ if(style==='residential') {
+  for(let floor=0;floor<3;floor++) {
+   rBox(
+    g,5,0.16,1.1,
+    R.white,0,3+floor*3,d/2+0.6
+   );
+  }
+ }
+
+ // Do‘kon soyaboni
+ if(style==='shop') {
+  rBox(g,w+0.5,0.5,1.4,R.yellow,0,5,d/2+0.8);
+ }
+
+ rLabel(g,name,0,h+3,d/2+0.8,w);
+
+ g.position.set(x,0,z);
+ realismCity.add(g);
+ return g;
+}
+
+// 1. Savdo va mehmonxona hududi
+const commercialBuildings=[
+ ["SAVDO MARKAZI",110,-144,"shop"],
+ ["RESTORAN",155,-144,"shop"],
+ ["MEHMONXONA",200,-144,"hotel"],
+ ["BIZNES MARKAZ",110,-108,"office"],
+ ["SUPERMARKET",155,-108,"shop"],
+ ["OFISLAR",200,-108,"office"]
+];
+
+commercialBuildings.forEach((b,i)=>{
+ makeRealBuilding(b[0],b[1],b[2],b[3],i);
+});
+
+// 2. Zamonaviy turar joy hududi
+const residentialBuildings=[
+ ["YANGI TURAR JOY",110,0,"residential"],
+ ["ZAMONAVIY UY",155,0,"residential"],
+ ["TURAR JOY MAJMUASI",200,0,"residential"],
+ ["OILA MASKANI",110,36,"residential"],
+ ["YANGI MAHALLA",155,36,"residential"],
+ ["KO‘P QAVATLI UY",200,36,"residential"]
+];
+
+residentialBuildings.forEach((b,i)=>{
+ makeRealBuilding(b[0],b[1],b[2],b[3],i+6);
+});
+
+// 3. Katta shahar bog‘i
+const cityPark=new THREE.Group();
+cityPark.position.set(220,0,72);
+realismCity.add(cityPark);
+
+rBox(cityPark,45,0.3,32,R.grass,0,0.1,0);
+
+// Markaziy ko‘l
+const lake=new THREE.Mesh(
+ new THREE.CircleGeometry(7,40),
+ new THREE.MeshStandardMaterial({
+  color:0x168eb8,
+  metalness:0.25,
+  roughness:0.2
+ })
+);
+lake.rotation.x=-Math.PI/2;
+lake.position.set(0,0.3,0);
+lake.scale.set(1.5,1,1);
+cityPark.add(lake);
+
+// Ko‘l atrofidagi yo‘lak
+const pathMat=R.stone;
+rBox(cityPark,3,0.15,25,pathMat,-13,0.3,0);
+rBox(cityPark,3,0.15,25,pathMat,13,0.3,0);
+rBox(cityPark,26,0.15,3,pathMat,0,0.3,-13);
+rBox(cityPark,26,0.15,3,pathMat,0,0.3,13);
+
+// Park daraxtlari
+function makeRealTree(parent,x,z,size=1) {
+ const tree=new THREE.Group();
+
+ const trunk=new THREE.Mesh(
+  new THREE.CylinderGeometry(0.22,0.32,2.6,8),
+  R.trunk
+ );
+ trunk.position.y=1.3;
+ tree.add(trunk);
+
+ const leaves=new THREE.Mesh(
+  new THREE.SphereGeometry(1.6,10,8),
+  R.green
+ );
+ leaves.position.y=3.3;
+ leaves.scale.set(size,size*1.2,size);
+ tree.add(leaves);
+
+ tree.position.set(x,0,z);
+ parent.add(tree);
+}
+
+for(let x=-19;x<=19;x+=7) {
+ makeRealTree(cityPark,x,-13);
+ makeRealTree(cityPark,x,13);
+}
+
+for(let z=-8;z<=8;z+=8) {
+ makeRealTree(cityPark,-20,z);
+ makeRealTree(cityPark,20,z);
+}
+
+// Park o‘rindiqlari
+for(let x of [-10,10]) {
+ rBox(cityPark,4,0.25,1.2,R.wood,x,0.8,-7);
+ for(let side of [-1,1]) {
+  rBox(cityPark,0.25,0.8,1,R.darkGlass,x+side*1.5,0.4,-7);
+ }
+}
+
+// 4. Avtobus bekatlari
+function makeBusStop(x,z) {
+ const stop=new THREE.Group();
+
+ // Pol
+ rBox(stop,9,0.2,3,R.stone,0,0.1,0);
+
+ // Tom
+ rBox(stop,9,0.25,3,R.roof,0,3.5,0);
+
+ // Ustunlar
+ for(let side of [-1,1]) {
+  for(let pos of [-3.8,3.8]) {
+   rBox(stop,0.18,3,0.18,R.gold,pos,1.6,side*1.2);
+  }
+ }
+
+ // Orqa shisha
+ rBox(stop,8,2.5,0.12,R.glass,0,1.7,-1.25);
+
+ // Bekat belgisi
+ rBox(stop,1.2,1.5,0.15,R.yellow,-3.2,2.1,1.5);
+
+ rLabel(stop,"AVTOBUS",0,4.5,0,7);
+ stop.position.set(x,0,z);
+ realismCity.add(stop);
+}
+
+makeBusStop(76,-18);
+makeBusStop(76,54);
+makeBusStop(76,126);
+
+// 5. Svetoforlar
+function makeCityTrafficLight(x,z) {
+ const light=new THREE.Group();
+
+ rBox(light,0.16,4,0.16,R.darkGlass,0,2,0);
+ rBox(light,0.8,2,0.65,R.darkGlass,0,4.5,0);
+
+ const lampColors=[0xe53935,0xffc107,0x22b85a];
+
+ lampColors.forEach((color,i)=>{
+  const bulb=new THREE.Mesh(
+   new THREE.SphereGeometry(0.23,10,8),
+   new THREE.MeshStandardMaterial({
+    color,
+    emissive:color,
+    emissiveIntensity:0.35
+   })
+  );
+  bulb.position.set(0,5.15-i*0.65,0.36);
+  light.add(bulb);
+ });
+
+ light.position.set(x,0,z);
+ realismCity.add(light);
+}
+
+// 6. Piyodalar o‘tish joylari va svetoforlar
+for(let i=0;i<10;i++) {
+ const z=-162+i*36;
+
+ for(let stripe=0;stripe<7;stripe++) {
+  rBox(
+   realismCity,0.7,0.045,7,
+   R.white,
+   78+stripe*1.3,0.09,z
+  );
+ }
+
+ makeCityTrafficLight(73,z-6.5);
+ makeCityTrafficLight(92,z+6.5);
+}
+
+// 7. Ko‘cha yoritgichlari
+function makeStreetLamp(x,z) {
+ const lamp=new THREE.Group();
+
+ rBox(lamp,0.18,5,0.18,R.darkGlass,0,2.5,0);
+
+ const arm=rBox(lamp,1.5,0.15,0.15,R.darkGlass,0.65,4.9,0);
+ arm.rotation.z=-0.1;
+
+ const bulb=new THREE.Mesh(
+  new THREE.BoxGeometry(0.7,0.22,0.5),
+  new THREE.MeshStandardMaterial({
+   color:0xffe4a0,
+   emissive:0xffc45c,
+   emissiveIntensity:0.8
+  })
+ );
+ bulb.position.set(1.25,4.8,0);
+ lamp.add(bulb);
+
+ lamp.position.set(x,0,z);
+ realismCity.add(lamp);
+}
+
+for(let i=0;i<10;i+=2) {
+ const z=-162+i*36;
+
+ for(let x=-180;x<=180;x+=90) {
+  makeStreetLamp(x,z-7);
+  makeStreetLamp(x,z+7);
+ }
+}
+
+// 8. Yo‘l chetidagi daraxtlar
+for(let i=0;i<10;i+=2) {
+ const z=-162+i*36;
+
+ for(let x=-200;x<=200;x+=40) {
+  makeRealTree(realismCity,x,z-9,0.8);
+  makeRealTree(realismCity,x,z+9,0.8);
+ }
+}
+
+// 9. Yangi shahar transport markazi
+const transportCenter=new THREE.Group();
+transportCenter.position.set(210,0,-72);
+realismCity.add(transportCenter);
+
+rBox(transportCenter,28,0.5,15,R.stone,0,0.25,0);
+rBox(transportCenter,25,5,12,R.wall,0,3,0);
+rBox(transportCenter,27,0.5,14,R.roof,0,5.8,0);
+
+// Transport markazining oynalari
+for(let i=-2;i<=2;i++) {
+ rBox(
+  transportCenter,3,2.8,0.15,
+  R.glass,i*4,3,6.1
+ );
+}
+
+rBox(transportCenter,4,3,0.2,R.darkGlass,0,1.8,6.2);
+rLabel(transportCenter,"TRANSPORT MARKAZI",0,8,0,22);
+
+// Avtobus
+const cityBus=new THREE.Group();
+
+rBox(cityBus,3.3,2.8,9,R.white,0,1.5,0);
+rBox(cityBus,3.35,1.2,7,R.glass,0,2.35,0);
+
+for(let x of [-1.7,1.7]) {
+ for(let z of [-3,3]) {
+  const wheel=new THREE.Mesh(
+   new THREE.CylinderGeometry(0.55,0.55,0.3,12),
+   R.darkGlass
+  );
+  wheel.rotation.z=Math.PI/2;
+  wheel.position.set(x,0.6,z);
+  cityBus.add(wheel);
+ }
+}
+
+cityBus.position.set(210,0,-86);
+realismCity.add(cityBus);
+
+// 10. Hududlarni ajratib turuvchi yashil maydonlar
+for(const z of [-126,-90,-54,-18,18,54,90,126]) {
+ rBox(realismCity,12,0.16,3,R.grass,225,0.12,z);
+}
+
+// UZB-CITY-REALISM-END
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
