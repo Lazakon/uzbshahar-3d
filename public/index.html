@@ -119,6 +119,22 @@ for (let i=0; i<10; i++) {
   }
 }
 
+// UZB-CITY-PLUS-ROAD-V1
+// Gorizontal yo'l va trotuarlar
+roadPlane(200,8,0,0,asphalt);
+roadPlane(200,1.2,0,-5.2,sidewalk);
+roadPlane(200,1.2,0,5.2,sidewalk);
+
+// Vertikal yo'l va trotuarlar
+roadPlane(8,120,0,0,asphalt);
+roadPlane(1.2,120,-5.2,0,sidewalk);
+roadPlane(1.2,120,5.2,0,sidewalk);
+
+// Yo'l chiziqlari
+for(let x=-94;x<=94;x+=12) roadPlane(2.5,0.13,x,0,roadLine);
+for(let z=-54;z<=54;z+=12) roadPlane(0.13,2.5,0,z,roadLine);
+// UZB-CITY-PLUS-ROAD-END
+
 const roadGeometry = new THREE.PlaneGeometry(1,1);
 
 for (const type of Object.keys(roadItems)) {
@@ -438,47 +454,43 @@ function updateCityCars(delta) {
 
 
 
+function mapHousePosition(x, z) {
+  return {x:Number(x)*0.62, z:Number(z)};
+}
+
 // UZB-MAHALLA-YOLAKLAR-START
 const mahallaPaths = new THREE.Group();
 scene.add(mahallaPaths);
-
 const mahallaPathMaterial = new THREE.MeshStandardMaterial({
- color:0xd8c6a4,
- roughness:1
+ color:0xd8c6a4, roughness:1
 });
 
 function buildMahallaPaths(houses) {
- mahallaPaths.clear();
+  mahallaPaths.clear();
+  const rows = new Map();
 
- const rows = new Map();
+  houses.forEach(h => {
+    const x = Number(h.house?.x);
+    const z = Number(h.house?.z);
+    if(!Number.isFinite(x) || !Number.isFinite(z)) return;
+    const pos = mapHousePosition(x,z);
+    if(!rows.has(pos.z)) rows.set(pos.z,[]);
+    rows.get(pos.z).push({x:pos.x,z:pos.z});
+  });
 
- houses.forEach(h => {
-  const x = Number(h.house?.x);
-  const z = Number(h.house?.z);
-  if(!Number.isFinite(x) || !Number.isFinite(z)) return;
-  if(!rows.has(z)) rows.set(z,[]);
-  rows.get(z).push({x,z});
- });
-
- for(const row of rows.values()) {
-  row.sort((a,b)=>a.x-b.x);
-  const streetZ = -162 + Math.round((row[0].z + 162)/36)*36;
-  const direction = row[0].z < streetZ ? 1 : -1;
-  const minX = row[0].x-5;
-  const maxX = row[row.length-1].x+5;
-
-  const path = new THREE.Mesh(
-   new THREE.BoxGeometry(maxX-minX,0.10,1.2),
-   mahallaPathMaterial
-  );
-
-  path.position.set(
-   (minX+maxX)/2,
-   0.06,
-   row[0].z + direction*4.95
-  );
-  mahallaPaths.add(path);
- }
+  for(const row of rows.values()) {
+    row.sort((a,b)=>a.x-b.x);
+    const streetZ = -162 + Math.round((row[0].z+162)/36)*36;
+    const direction = row[0].z < streetZ ? 1 : -1;
+    const minX = row[0].x-5;
+    const maxX = row[row.length-1].x+5;
+    const path = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.max(2,maxX-minX),0.10,1.2),
+      mahallaPathMaterial
+    );
+    path.position.set((minX+maxX)/2,0.06,row[0].z+direction*4.95);
+    mahallaPaths.add(path);
+  }
 }
 // UZB-MAHALLA-YOLAKLAR-END
 
@@ -603,7 +615,8 @@ function makeHouse(user,x,z,houseId){
  label.scale.set(12,3,1);
  group.add(label);
 
- group.position.set(x,0,z);
+ const housePosition = mapHousePosition(x,z);
+  group.position.set(housePosition.x,0,housePosition.z);
  const streetZ = -162 + Math.round((z+162)/36)*36;
  if(z > streetZ) group.rotation.y = Math.PI;
 
@@ -1389,7 +1402,7 @@ function updateCityBoundary(houses) {
 
   const positions = houses
     .filter(h => h.house && Number.isFinite(Number(h.house.x)) && Number.isFinite(Number(h.house.z)))
-    .map(h => ({x:Number(h.house.x), z:Number(h.house.z)}));
+    .map(h => mapHousePosition(h.house.x,h.house.z));
 
   if (!positions.length) return;
 
@@ -1452,8 +1465,9 @@ async function loadHouses(){
 
  const mine=houses.find(h=>h.username===myUser);
  if(mine){
-  controls.target.set(mine.house.x, 0, mine.house.z);
-  camera.position.set(mine.house.x+25, 25, mine.house.z+30);
+  const minePosition = mapHousePosition(mine.house.x,mine.house.z);
+  controls.target.set(minePosition.x,0,minePosition.z);
+  camera.position.set(minePosition.x+25,25,minePosition.z+30);
   controls.update();
  }
 }
@@ -1491,8 +1505,9 @@ async function findHouse(){
    }
    highlightedHouse = obj;
    obj.children[0].material.color.set(0xffd700);
-   controls.target.set(found.house.x, 0, found.house.z);
-   camera.position.set(found.house.x+20, 18, found.house.z+24);
+   const foundPosition = mapHousePosition(found.house.x,found.house.z);
+   controls.target.set(foundPosition.x,0,foundPosition.z);
+   camera.position.set(foundPosition.x+20,18,foundPosition.z+24);
    controls.update();
    result.textContent = '🏠 @' + found.username + ' uyi topildi!';
  }catch(e){
@@ -1537,10 +1552,11 @@ function addVirtualPerson(preferredHome = null) {
  const row = Math.floor(Math.random()*100);
  const home = preferredHome || virtualPeopleHomes[Math.floor(Math.random()*virtualPeopleHomes.length)];
  const location = home && home.house ? home.house : {x:0,z:0};
+ const personHomePosition = mapHousePosition(location.x,location.z);
  person.position.set(
-  Number(location.x) + Math.random()*28-14,
+  personHomePosition.x+Math.random()*28-14,
   0,
-  Number(location.z) + 9 + Math.random()*8
+  personHomePosition.z+9+Math.random()*8
  );
  person.userData.direction = Math.random()<0.5 ? 1 : -1;
  person.userData.speed = 1+Math.random()*1.2;
