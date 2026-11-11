@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UZB SHAHAR — Admin</title>
+<style>
+body{background:#0b1220;color:white;font:16px Arial;padding:18px;margin:0}
+main{max-width:850px;margin:25px auto}
+section{background:#19283e;padding:18px;border-radius:14px;margin:14px 0}
+input,textarea{display:block;width:100%;box-sizing:border-box;padding:12px;margin:9px 0;background:#0b1729;color:white;border:1px solid #526780;border-radius:8px}
+button{padding:11px 16px;background:#2563eb;color:white;border:0;border-radius:8px;margin:5px;cursor:pointer}
+.person{border-top:1px solid #40516a;padding:12px 0}
+.hidden{display:none}.muted{color:#aabbd0}
+</style>
+</head>
+<body><main>
+<h2>UZB SHAHAR 3D — Admin panel</h2>
+<section id="login">
+<h3>Admin kirish</h3>
+<form id="loginForm">
+<input id="username" placeholder="Login" autocomplete="username" required>
+<input id="password" type="password" placeholder="Parol" autocomplete="current-password" required>
+<button>Kirish</button>
+</form>
+<p id="message" class="muted"></p>
+</section>
+<section id="panel" class="hidden">
+<h3>Aholi soni: <span id="total">0</span></h3>
+<button id="refresh">Yangilash</button>
+<button id="logout">Chiqish</button>
+<input id="search" placeholder="Username qidirish">
+<div id="users"></div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+async function api(url,options={}){
+ const r=await fetch(url,{credentials:'same-origin',...options,
+ headers:{'Content-Type':'application/json',...(options.headers||{})}});
+ const d=await r.json();
+ if(!r.ok)throw Error(d.error||'Xatolik');
+ return d;
+}
+function showPanel(){
+ $('login').classList.add('hidden');
+ $('panel').classList.remove('hidden');
+ loadUsers();
+}
+async function loadUsers(){
+ try{
+  const d=await api('/api/admin/users');
+  $('total').textContent=d.total;
+  const q=$('search').value.toLowerCase();
+  $('users').replaceChildren();
+  d.users.filter(u=>u.username.toLowerCase().includes(q)).forEach(u=>{
+   const box=document.createElement('div');box.className='person';
+   const title=document.createElement('h3');
+   title.textContent='@'+u.username+' · Uy #'+u.house_id;
+   const name=document.createElement('input');name.value=u.display_name||'';
+   name.placeholder='Ism';
+   const bio=document.createElement('textarea');bio.value=u.bio||'';
+   bio.placeholder='Profil haqida';
+   const type=document.createElement('input');type.value=u.house_type||'one-floor';
+   type.placeholder='Uy turi';
+   const save=document.createElement('button');save.textContent='Saqlash';
+   save.onclick=async()=>{
+    try{
+     await api('/api/admin/users/'+encodeURIComponent(u.username),{
+      method:'PATCH',
+      body:JSON.stringify({displayName:name.value,bio:bio.value,houseType:type.value})
+     });
+     save.textContent='Saqlandi';
+    }catch(e){alert(e.message)}
+   };
+   box.append(title,name,bio,type,save);$('users').append(box);
+  });
+ }catch(e){alert(e.message)}
+}
+$('loginForm').onsubmit=async e=>{
+ e.preventDefault();$('message').textContent='Tekshirilmoqda...';
+ try{
+  await api('/api/admin/login',{method:'POST',
+   body:JSON.stringify({username:$('username').value,password:$('password').value})});
+  $('password').value='';showPanel();
+ }catch(e){$('message').textContent=e.message}
+};
+$('refresh').onclick=loadUsers;
+$('search').oninput=loadUsers;
+$('logout').onclick=async()=>{
+ await api('/api/admin/logout',{method:'POST'});
+ $('panel').classList.add('hidden');$('login').classList.remove('hidden');
+};
+(async()=>{try{await api('/api/admin/me');showPanel()}catch{}})();
+</script>
+</body>
+</html>

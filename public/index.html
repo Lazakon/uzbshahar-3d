@@ -61,7 +61,7 @@ camera.lookAt(0,0,0);
 const renderer=new THREE.WebGLRenderer({antialias:false, powerPreference:"high-performance"});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(
-  Math.min(devicePixelRatio, innerWidth < 700 ? 1.35 : 1.75)
+  Math.min(devicePixelRatio, innerWidth < 700 ? 1.1 : 1.4)
 );
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
@@ -1616,5 +1616,16 @@ addEventListener('resize',()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 </script>
+
+<style>
+#uzbAdminEntry{
+ position:fixed;right:14px;bottom:18px;z-index:9998;
+ padding:10px 15px;border-radius:12px;background:#172554;
+ color:white;text-decoration:none;font:600 14px Arial;
+ border:1px solid #64748b;box-shadow:0 3px 12px #0005
+}
+</style>
+<a id="uzbAdminEntry" href="/admin">Kirish</a>
+
 </body>
 </html>

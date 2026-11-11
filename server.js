@@ -208,6 +208,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', app: 'UZB SHAHAR 3D' });
 });
 
+app.use(require('./admin')(pool));
+
 app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
   console.log('UZB SHAHAR 3D server ishga tushdi!');
 });
