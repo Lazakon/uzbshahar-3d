@@ -72,7 +72,12 @@ module.exports = function(pool) {
       if (!validUser || !validPassword) {
         attempt.count++;
         attempts.set(ip, attempt);
-        return res.status(401).json({error: 'Login yoki parol noto‘g‘ri'});
+        return res.status(401).json({
+      error: 'Login yoki parol noto‘g‘ri. Diagnostika: login yuborildi=' + (username ? 'ha' : 'yo‘q') +
+      '; parol yuborildi=' + (password ? 'ha' : 'yo‘q') +
+      '; ADMIN_USERNAME mavjud=' + (process.env.ADMIN_USERNAME ? 'ha' : 'yo‘q') +
+      '; ADMIN_PASSWORD_HASH mavjud=' + (process.env.ADMIN_PASSWORD_HASH ? 'ha' : 'yo‘q')
+    });
       }
 
       attempts.delete(ip);
