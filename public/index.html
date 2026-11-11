@@ -18,6 +18,13 @@ button{background:#e5a936;color:#151515;font-weight:bold}
 #houseSearch input{width:100%;padding:11px;margin:0}
 #houseSearch button{padding:11px;margin-top:7px}
 #searchResult{font-size:13px;margin:7px 2px 0}
+
+#uzbRegions{position:fixed;right:12px;top:12px;z-index:10;width:230px;background:#14243bea;border:1px solid #7185a5;border-radius:13px;padding:12px;color:white;font:14px Arial}
+#uzbRegions select,#uzbRegions button{width:100%;padding:10px;border:0;border-radius:8px;margin-top:8px}
+#uzbRegions button{background:#e5a936;color:#151515;font-weight:bold}
+#uzbRegions small{color:#cbd5e1}
+@media(max-width:600px){#uzbRegions{width:185px;right:7px;top:7px;padding:8px;font-size:12px}#uzbRegions select,#uzbRegions button{padding:8px}}
+
 </style>
 </head>
 <body>
@@ -36,6 +43,16 @@ button{background:#e5a936;color:#151515;font-weight:bold}
 <input id="houseQuery" placeholder="@username yoki UZB-uyraqami">
 <button onclick="findHouse()">🔎 Uyimni topish</button>
 <div id="searchResult"></div>
+</div>
+
+
+<div id="uzbRegions">
+ <b>🇺🇿 O‘ZBEKISTON HUDUDLARI</b>
+ <small id="uzbPlaceInfo">14 ta hudud va shaharlar</small>
+ <select id="uzbCitySelect">
+  <option value="69.24,41.30">Toshkent shahri</option>
+ </select>
+ <button onclick="goUzCity()">📍 Shaharga borish</button>
 </div>
 
 <script type="importmap">
@@ -1591,6 +1608,182 @@ function updateVirtualPeople(delta) {
  });
 }
 // UZB-VIRTUAL-PEOPLE-END
+
+
+// UZB-REGIONS-START
+const uzbPlaces = [
+{region:"Qoraqalpog‘iston",name:"Nukus",lon:59.61,lat:42.46,capital:true},
+{region:"Qoraqalpog‘iston",name:"Xo‘jayli",lon:59.44,lat:42.40},
+{region:"Qoraqalpog‘iston",name:"Beruniy",lon:60.75,lat:41.69},
+{region:"Qoraqalpog‘iston",name:"To‘rtko‘l",lon:60.78,lat:41.55},
+{region:"Qoraqalpog‘iston",name:"Chimboy",lon:59.82,lat:42.93},
+
+{region:"Xorazm",name:"Urganch",lon:60.63,lat:41.55,capital:true},
+{region:"Xorazm",name:"Xiva",lon:60.36,lat:41.38},
+{region:"Xorazm",name:"Pitnak",lon:60.83,lat:41.08},
+
+{region:"Buxoro",name:"Buxoro",lon:64.42,lat:39.77,capital:true},
+{region:"Buxoro",name:"Kogon",lon:64.55,lat:39.72},
+{region:"Buxoro",name:"G‘ijduvon",lon:64.68,lat:40.10},
+
+{region:"Navoiy",name:"Navoiy",lon:65.38,lat:40.10,capital:true},
+{region:"Navoiy",name:"Zarafshon",lon:64.20,lat:41.58},
+{region:"Navoiy",name:"Uchquduq",lon:63.55,lat:42.15},
+
+{region:"Qashqadaryo",name:"Qarshi",lon:65.80,lat:38.86,capital:true},
+{region:"Qashqadaryo",name:"Shahrisabz",lon:66.83,lat:39.05},
+{region:"Qashqadaryo",name:"Kitob",lon:66.87,lat:39.12},
+{region:"Qashqadaryo",name:"Muborak",lon:65.25,lat:39.27},
+
+{region:"Surxondaryo",name:"Termiz",lon:67.28,lat:37.22,capital:true},
+{region:"Surxondaryo",name:"Denov",lon:67.90,lat:38.27},
+{region:"Surxondaryo",name:"Boysun",lon:67.20,lat:38.21},
+{region:"Surxondaryo",name:"Sherobod",lon:67.23,lat:37.67},
+
+{region:"Samarqand",name:"Samarqand",lon:66.96,lat:39.65,capital:true},
+{region:"Samarqand",name:"Kattaqo‘rg‘on",lon:66.25,lat:39.90},
+{region:"Samarqand",name:"Urgut",lon:67.24,lat:39.40},
+
+{region:"Jizzax",name:"Jizzax",lon:67.84,lat:40.12,capital:true},
+{region:"Jizzax",name:"Gagarin",lon:68.17,lat:40.66},
+{region:"Jizzax",name:"Dashtobod",lon:68.05,lat:40.13},
+
+{region:"Sirdaryo",name:"Guliston",lon:68.78,lat:40.49,capital:true},
+{region:"Sirdaryo",name:"Yangiyer",lon:68.82,lat:40.28},
+{region:"Sirdaryo",name:"Shirin",lon:68.67,lat:40.05},
+
+{region:"Toshkent viloyati",name:"Nurafshon",lon:69.32,lat:41.04,capital:true},
+{region:"Toshkent viloyati",name:"Chirchiq",lon:69.58,lat:41.47},
+{region:"Toshkent viloyati",name:"Angren",lon:70.14,lat:41.02},
+{region:"Toshkent viloyati",name:"Olmaliq",lon:69.60,lat:40.85},
+{region:"Toshkent viloyati",name:"Bekobod",lon:69.27,lat:40.22},
+{region:"Toshkent viloyati",name:"Yangiyo‘l",lon:69.05,lat:41.11},
+
+{region:"Toshkent shahri",name:"Toshkent",lon:69.24,lat:41.30,capital:true},
+
+{region:"Namangan",name:"Namangan",lon:71.67,lat:40.99,capital:true},
+{region:"Namangan",name:"Chust",lon:71.24,lat:41.00},
+{region:"Namangan",name:"Chortoq",lon:71.82,lat:41.07},
+{region:"Namangan",name:"Pop",lon:71.10,lat:40.87},
+
+{region:"Farg‘ona",name:"Farg‘ona",lon:71.78,lat:40.39,capital:true},
+{region:"Farg‘ona",name:"Qo‘qon",lon:70.94,lat:40.53},
+{region:"Farg‘ona",name:"Marg‘ilon",lon:71.72,lat:40.47},
+{region:"Farg‘ona",name:"Rishton",lon:71.28,lat:40.36},
+
+{region:"Andijon",name:"Andijon",lon:72.34,lat:40.78,capital:true},
+{region:"Andijon",name:"Asaka",lon:72.24,lat:40.64},
+{region:"Andijon",name:"Shahrixon",lon:72.06,lat:40.71},
+{region:"Andijon",name:"Xonobod",lon:72.99,lat:40.80}
+];
+
+const uzbGeoGroup = new THREE.Group();
+scene.add(uzbGeoGroup);
+
+const uzbCityObjects = [];
+
+function uzbGeoPosition(place){
+ return {
+  x:(place.lon-64.7)*23,
+  z:-(place.lat-41.3)*23
+ };
+}
+
+function makeUzbLabel(name){
+ const canvas=document.createElement('canvas');
+ canvas.width=512;
+ canvas.height=128;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle='rgba(13,27,48,0.88)';
+ ctx.fillRect(5,5,502,118);
+ ctx.strokeStyle='#f5c451';
+ ctx.lineWidth=5;
+ ctx.strokeRect(5,5,502,118);
+ ctx.fillStyle='white';
+ ctx.font='bold 42px Arial';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+ ctx.fillText(name,256,64,470);
+ const texture=new THREE.CanvasTexture(canvas);
+ const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
+  map:texture,transparent:true,depthTest:false
+ }));
+ sprite.scale.set(17,4.25,1);
+ return sprite;
+}
+
+for(const place of uzbPlaces){
+ const pos=uzbGeoPosition(place);
+ const group=new THREE.Group();
+
+ const base=new THREE.Mesh(
+  new THREE.CylinderGeometry(place.capital?2.3:1.25,place.capital?2.3:1.25,0.35,20),
+  new THREE.MeshStandardMaterial({
+   color:place.capital?0xe5a936:0x287fbd,
+   emissive:place.capital?0x664000:0x092d50,
+   roughness:0.55
+  })
+ );
+ base.position.y=0.35;
+ group.add(base);
+
+ const pin=new THREE.Mesh(
+  new THREE.SphereGeometry(place.capital?1.15:0.7,12,12),
+  new THREE.MeshStandardMaterial({
+   color:place.capital?0xffd34e:0x67d9ff,
+   emissive:place.capital?0x8a5500:0x075577
+  })
+ );
+ pin.position.y=1.4;
+ group.add(pin);
+
+ if(place.capital){
+  const label=makeUzbLabel(place.name);
+  label.position.set(0,7,0);
+  group.add(label);
+ }
+
+ group.position.set(pos.x,0,pos.z);
+ group.userData.place=place;
+ uzbGeoGroup.add(group);
+ uzbCityObjects.push(group);
+}
+
+const uzbSelect=document.getElementById('uzbCitySelect');
+const uzbGroups=[...new Set(uzbPlaces.map(p=>p.region))];
+
+for(const region of uzbGroups){
+ const optgroup=document.createElement('optgroup');
+ optgroup.label=region;
+ for(const place of uzbPlaces.filter(p=>p.region===region)){
+  const option=document.createElement('option');
+  const pos=uzbGeoPosition(place);
+  option.value=pos.x+','+pos.z;
+  option.textContent=place.name+(place.capital?' — markaz':'');
+  optgroup.appendChild(option);
+ }
+ uzbSelect.appendChild(optgroup);
+}
+
+window.goUzCity=function(){
+ const values=uzbSelect.value.split(',').map(Number);
+ const x=values[0],z=values[1];
+ if(!Number.isFinite(x)||!Number.isFinite(z)) return;
+
+ controls.target.set(x,0,z);
+ camera.position.set(x+27,23,z+32);
+ controls.update();
+
+ const place=uzbPlaces.find(p=>{
+  const q=uzbGeoPosition(p);
+  return Math.abs(q.x-x)<0.01 && Math.abs(q.z-z)<0.01;
+ });
+ if(place){
+  document.getElementById('uzbPlaceInfo').textContent=
+   place.region+' — '+place.name;
+ }
+};
+// UZB-REGIONS-END
 
 let lastFrameTime = 0;
 
