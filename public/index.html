@@ -8,7 +8,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:#10182c;color:white;font-family:Arial;overflow:hidden}
 canvas{display:block}
-#login{position:fixed;inset:0;z-index:5;background:#10182cee;display:flex;align-items:center;justify-content:center;padding:20px}
+#login{position:fixed;inset:0;z-index:5;background:#10182cee;display:none;align-items:center;justify-content:center;padding:20px}
 .panel{background:#202e48;padding:28px;border-radius:18px;width:100%;max-width:360px;text-align:center}
 input,button{width:100%;padding:15px;border:0;border-radius:9px;margin-top:12px;font-size:16px}
 button{background:#e5a936;color:#151515;font-weight:bold}
@@ -1784,6 +1784,184 @@ window.goUzCity=function(){
  }
 };
 // UZB-REGIONS-END
+
+
+// ===== 3D WORLD GLOBE =====
+const citySceneObjects = scene.children.filter(o => !o.isLight);
+citySceneObjects.forEach(o => o.visible = false);
+scene.fog = null;
+
+const worldGlobe = new THREE.Group();
+scene.add(worldGlobe);
+
+const earthTexture = new THREE.TextureLoader().load(
+ 'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'
+);
+const earth = new THREE.Mesh(
+ new THREE.SphereGeometry(20, 96, 64),
+ new THREE.MeshStandardMaterial({
+  map: earthTexture,
+  roughness: 1,
+  metalness: 0
+ })
+);
+worldGlobe.add(earth);
+
+const atmosphere = new THREE.Mesh(
+ new THREE.SphereGeometry(20.45, 64, 48),
+ new THREE.MeshBasicMaterial({
+  color:0x48aaff, transparent:true, opacity:0.10,
+  side:THREE.BackSide
+ })
+);
+worldGlobe.add(atmosphere);
+
+camera.position.set(0, 30, 65);
+camera.lookAt(0,0,0);
+controls.target.set(0,0,0);
+controls.minDistance = 23;
+controls.maxDistance = 110;
+controls.update();
+
+const worldInfo = document.createElement('div');
+worldInfo.id = 'worldInfo';
+worldInfo.innerHTML = '🌍 <b>UZB SHAHAR 3D — DUNYO</b><br>Davlatni tanlash uchun Yer sharini bosing';
+Object.assign(worldInfo.style,{
+ position:'fixed',top:'18px',left:'50%',transform:'translateX(-50%)',
+ zIndex:'10',padding:'13px 18px',borderRadius:'14px',
+ background:'#10182cee',color:'white',textAlign:'center',
+ font:'14px Arial',lineHeight:'1.7',maxWidth:'90%',
+ border:'1px solid #60a5fa'
+});
+document.body.appendChild(worldInfo);
+
+let worldCountries = [];
+const countryLines = new THREE.Group();
+worldGlobe.add(countryLines);
+
+function globePoint(lon,lat,r=20.08){
+ const a=THREE.MathUtils.degToRad(lon);
+ const b=THREE.MathUtils.degToRad(lat);
+ return new THREE.Vector3(
+  -r*Math.cos(b)*Math.sin(a),
+  r*Math.sin(b),
+  r*Math.cos(b)*Math.cos(a)
+ );
+}
+
+function drawRing(ring){
+ const points=ring.map(c=>globePoint(c[0],c[1],20.09));
+ if(points.length<2)return;
+ const geometry=new THREE.BufferGeometry().setFromPoints(points);
+ const line=new THREE.Line(
+  geometry,
+  new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.75})
+ );
+ countryLines.add(line);
+}
+
+function drawCountries(data){
+ worldCountries=data.features||[];
+ for(const feature of worldCountries){
+  const g=feature.geometry;
+  if(!g)continue;
+  if(g.type==='Polygon'){
+   g.coordinates.forEach(drawRing);
+  }else if(g.type==='MultiPolygon'){
+   g.coordinates.forEach(poly=>poly.forEach(drawRing));
+  }
+ }
+}
+
+fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+ .then(r=>{if(!r.ok)throw Error('GeoJSON yuklanmadi');return r.json();})
+ .then(drawCountries)
+ .catch(e=>console.warn('Davlat chegaralari:',e));
+
+function insideRing(point,ring){
+ let inside=false;
+ const x=point[0],y=point[1];
+ for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+  const xi=ring[i][0],yi=ring[i][1];
+  const xj=ring[j][0],yj=ring[j][1];
+  if(((yi>y)!==(yj>y)) &&
+    x<(xj-xi)*(y-yi)/(yj-yi+0.0000001)+xi) inside=!inside;
+ }
+ return inside;
+}
+
+function countryAt(lon,lat){
+ for(const f of worldCountries){
+  const g=f.geometry;
+  if(!g)continue;
+  const polygons=g.type==='Polygon'?[g.coordinates]:
+   g.type==='MultiPolygon'?g.coordinates:[];
+  for(const poly of polygons){
+   if(poly.length && insideRing([lon,lat],poly[0])){
+    let inHole=false;
+    for(let h=1;h<poly.length;h++){
+     if(insideRing([lon,lat],poly[h]))inHole=true;
+    }
+    if(!inHole)return f;
+   }
+  }
+ }
+ return null;
+}
+
+const globeRaycaster=new THREE.Raycaster();
+const globeMouse=new THREE.Vector2();
+
+renderer.domElement.addEventListener('click',e=>{
+ if(!worldGlobe.visible)return;
+ const rect=renderer.domElement.getBoundingClientRect();
+ globeMouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+ globeMouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+ globeRaycaster.setFromCamera(globeMouse,camera);
+ const hit=globeRaycaster.intersectObject(earth);
+ if(!hit.length)return;
+
+ const v=hit[0].point.clone().normalize();
+ const lat=THREE.MathUtils.radToDeg(Math.asin(v.y));
+ const lon=THREE.MathUtils.radToDeg(Math.atan2(-v.x,v.z));
+ const feature=countryAt(lon,lat);
+
+ if(!feature){
+  worldInfo.innerHTML='🌍 Davlat chegaralari yuklanmoqda yoki bu nuqta aniqlanmadi.';
+  return;
+ }
+
+ const props=feature.properties||{};
+ const name=props.ADMIN||props.name||props.NAME||'Tanlangan davlat';
+ worldInfo.innerHTML='🌐 <b>'+name+'</b><br>Davlat tanlandi';
+
+ const target=globePoint(lon,lat,1).normalize();
+ const destination=target.clone().multiplyScalar(38);
+ camera.position.copy(destination);
+ controls.target.set(0,0,0);
+ controls.update();
+
+ if(/uzbekistan|o‘zbekiston|узбекистан/i.test(name)){
+  worldInfo.innerHTML='🇺🇿 <b>O‘ZBEKISTON</b><br>UZB SHAHAR 3D ochilmoqda...';
+  setTimeout(()=>{
+   worldGlobe.visible=false;
+   countryLines.visible=false;
+   citySceneObjects.forEach(o=>o.visible=true);
+   scene.fog=new THREE.Fog(0x9bc4dc,220,650);
+   camera.position.set(35,40,55);
+   controls.target.set(0,0,0);
+   controls.minDistance=12;
+   controls.maxDistance=420;
+   controls.update();
+   worldInfo.remove();
+   document.getElementById('login').style.display='flex';
+  },700);
+ }
+});
+
+worldInfo.innerHTML='🌍 <b>UZB SHAHAR 3D</b><br>Yer sharini aylantiring va davlatni tanlang';
+// ===== END WORLD GLOBE =====
+
 
 let lastFrameTime = 0;
 
