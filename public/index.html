@@ -1389,7 +1389,7 @@ async function enterCity(){
   const response=await fetch('/api/login',{
    method:'POST',
    headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({username})
+   body:JSON.stringify({username, country:selectedWorldCountry})
   });
   const data=await response.json();
   if(!response.ok)throw new Error(data.error);
@@ -1909,7 +1909,7 @@ function countryAt(lon,lat){
  return null;
 }
 
-const globeRaycaster=new THREE.Raycaster();
+let selectedWorldCountry = '';\nconst globeRaycaster=new THREE.Raycaster();
 const globeMouse=new THREE.Vector2();
 
 renderer.domElement.addEventListener('click',e=>{
@@ -1933,7 +1933,12 @@ renderer.domElement.addEventListener('click',e=>{
 
  const props=feature.properties||{};
  const name=props.ADMIN||props.name||props.NAME||'Tanlangan davlat';
- worldInfo.innerHTML='🌐 <b>'+name+'</b><br>Davlat tanlandi';
+ const isUzbekistan = /uzbekistan|o‘zbekiston|o'zbekiston|узбекистан/i.test(name);
+ selectedWorldCountry = isUzbekistan ? 'Uzbekistan' : name;
+
+ worldInfo.innerHTML = isUzbekistan
+  ? '🇺🇿 <b>O‘ZBEKISTON</b><br>Uy qurish mumkin'
+  : '🌐 <b>'+name+'</b><br>🔒 Hozircha bu davlatda uy qurish yopiq';
 
  const target=globePoint(lon,lat,1).normalize();
  const destination=target.clone().multiplyScalar(38);
@@ -1941,7 +1946,7 @@ renderer.domElement.addEventListener('click',e=>{
  controls.target.set(0,0,0);
  controls.update();
 
- if(/uzbekistan|o‘zbekiston|узбекистан/i.test(name)){
+ if(isUzbekistan){
   worldInfo.innerHTML='🇺🇿 <b>O‘ZBEKISTON</b><br>UZB SHAHAR 3D ochilmoqda...';
   setTimeout(()=>{
    worldGlobe.visible=false;

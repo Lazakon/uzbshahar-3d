@@ -78,6 +78,15 @@ app.post('/api/login', async (req, res) => {
     let user;
 
     if (index === -1) {
+      const selectedCountry = String(req.body.country || '').trim().toLowerCase();
+      const uzbekistanNames = ['uzbekistan', 'o‘zbekiston', "o'zbekiston", 'uz', 'uzb', 'узбекистан'];
+
+      if (!uzbekistanNames.includes(selectedCountry)) {
+        return res.status(403).json({
+          error: 'Hozircha faqat O‘zbekiston hududida uy qurish mumkin. Globusdan O‘zbekistonni tanlang.'
+        });
+      }
+
       index = rows.length;
       const pos = getHousePosition(index);
 
