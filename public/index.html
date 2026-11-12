@@ -1909,7 +1909,8 @@ function countryAt(lon,lat){
  return null;
 }
 
-let selectedWorldCountry = '';\nconst globeRaycaster=new THREE.Raycaster();
+let selectedWorldCountry = '';
+const globeRaycaster=new THREE.Raycaster();
 const globeMouse=new THREE.Vector2();
 
 renderer.domElement.addEventListener('click',e=>{
